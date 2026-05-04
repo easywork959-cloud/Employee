@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HR Employee Record System v3</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8f7f5;--surface:#fff;--sidebar:#1a1a18;--sh:#2a2a28;--accent:#1a1a18;--border:#e8e6e1;--muted:#8a8880;--text:#1a1a18;--green:#16a34a;--red:#dc2626;--amber:#ca8a04;--blue:#2563eb}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);margin:0;height:100vh;overflow:hidden}
+.sidebar{background:var(--sidebar);color:#e8e6e1;width:220px;min-width:220px;height:100vh;overflow-y:auto;display:flex;flex-direction:column;transition:transform .25s;z-index:200;flex-shrink:0}
+.sidebar-brand{padding:18px 20px 6px;font-size:12px;font-weight:600;letter-spacing:.1em;color:#aaa8a3;text-transform:uppercase}
+.sidebar-nav a{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;color:#c8c6c1;text-decoration:none;cursor:pointer;transition:background .15s}
+.sidebar-nav a:hover{background:var(--sh);color:#fff}
+.sidebar-nav a.active{background:#fff1;color:#fff;font-weight:500}
+.sidebar-nav .slabel{padding:12px 20px 3px;font-size:10px;letter-spacing:.12em;color:#5a5856;text-transform:uppercase}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
+.mob-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text)}
+.tbar-search{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px;flex:1;max-width:260px}
+.tbar-search input{border:none;background:transparent;outline:none;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);width:100%;min-width:0}
+.content-area{flex:1;overflow-y:auto;padding:16px}
+.page{display:none}.page.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.stat-val{font-size:24px;font-weight:600;line-height:1}
+.stat-lbl{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#333}
+.btn-secondary{background:var(--surface);border:1px solid var(--border);color:var(--text)}.btn-secondary:hover{background:var(--bg)}
+.btn-danger{background:#fef2f2;border:1px solid #fecaca;color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:11.5px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-active{background:#dcfce7;color:#16a34a}.badge-resigned{background:#fee2e2;color:#dc2626}
+.badge-transferred{background:#dbeafe;color:#2563eb}.badge-probation{background:#fef9c3;color:#ca8a04}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:580px}
+thead th{padding:9px 12px;text-align:left;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:#faf9f7;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid #f0ede8;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#faf9f7}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:680px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);border-radius:14px 14px 0 0;z-index:1}
+.modal-body{padding:18px 20px;max-height:72vh;overflow-y:auto}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface);border-radius:0 0 14px 14px}
+.fg{margin-bottom:12px}
+.flabel{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.fc{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.fc:focus{border-color:#999;background:#fff}
+.fc.warn{border-color:#f59e0b;background:#fffbeb}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stitle{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.tab-btn{padding:8px 16px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;white-space:nowrap}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
+.progress-bar{height:5px;border-radius:3px;background:#eee;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+.toast{position:fixed;bottom:16px;right:16px;background:var(--accent);color:#fff;padding:10px 16px;border-radius:9px;font-size:12.5px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:300px}
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:100%;max-width:380px}
+input[type="file"]{display:none}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:#d0cec9;border-radius:10px}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filter-bar .fc{padding:5px 8px;font-size:12px}
+.ptag{font-size:10.5px;padding:2px 7px;border-radius:4px;background:#f0ede8;color:var(--muted)}
+.history-item{padding:9px 0;border-bottom:1px solid #f0ede8;display:flex;gap:10px}
+.hdot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.salary-card-inner{background:#faf9f7;border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-bottom:8px}
+.asset-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0ede8}
+.ibox{padding:8px 12px;border-radius:7px;font-size:11.5px;margin-bottom:8px}
+.ibox-blue{background:#eff6ff;color:var(--blue)}
+.ibox-green{background:#f0fdf4;color:#16a34a}
+.ibox-amber{background:#fffbeb;color:#92400e}
+.ibox-gray{background:#f8f7f5;color:var(--muted)}
+.stab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.stab-btn{padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;white-space:nowrap}
+.stab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
+.stab-panel{display:none}.stab-panel.active{display:block}
+@media(max-width:768px){
+  body{overflow:auto;height:auto}
+  .app-shell{flex-direction:column;height:auto;min-height:100vh}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);height:100vh}
+  .sidebar.open{transform:translateX(0)}
+  .mob-overlay.open{display:block}
+  .mob-menu-btn{display:flex}
+  .main{min-height:100vh}
+  .content-area{padding:12px}
+  .fgrid{grid-template-columns:1fr}
+  .modal-body{max-height:60vh}
+  .topbar{padding:0 12px}
+  .tbar-search{max-width:none}
+  .g4{grid-template-columns:1fr 1fr!important}
+  .g3{grid-template-columns:1fr 1fr!important}
+  .g2{grid-template-columns:1fr!important}
+  table{font-size:12px}
+  .btn{padding:6px 11px;font-size:12px}
+}
+@media(max-width:480px){.g4{grid-template-columns:1fr!important}.login-card{padding:24px 20px}}
+</style>
+</head>
+<body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div style="margin-bottom:22px"><div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">HR System v3</div><div style="font-size:20px;font-weight:600">Welcome back</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px">Sign in to continue</div></div>
+    <div class="fg"><label class="flabel">Username</label><input class="fc" id="loginUser" value="admin"></div>
+    <div class="fg"><label class="flabel">Password</label><input class="fc" type="password" id="loginPass" value="1234"></div>
+    <div id="loginError" style="color:var(--red);font-size:11.5px;margin-bottom:8px;display:none">Invalid credentials</div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Sign In</button>
+    <div style="margin-top:12px;padding:10px;background:#f8f7f5;border-radius:8px;font-size:11px;color:var(--muted)"><strong>Demo:</strong> admin/1234 (Full) · asm01/1234 (ASM·NOR·DC01) · rsm01/1234 (RSM·NOR)</div>
+  </div>
+</div>
+
+<div class="app-shell" style="display:flex;height:100vh;overflow:hidden">
+  <div class="mob-overlay" id="mobOverlay" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">HR System</div>
+    <div style="padding:6px 12px 10px"><div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff1;border-radius:8px"><div style="width:32px;height:32px;border-radius:50%;background:#fff2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0" id="sidebarAvatar">AD</div><div style="min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sidebarName">Admin</div><div style="font-size:10px;color:#7a7875" id="sidebarRole">Super Admin</div></div></div></div>
+    <div class="sidebar-nav">
+      <div class="slabel">Overview</div>
+      <a onclick="nav('dashboard')" id="nav-dashboard" class="active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <div class="slabel">People</div>
+      <a onclick="nav('employees')" id="nav-employees"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Employees</a>
+      <a onclick="nav('transfer')" id="nav-transfer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Transfer / Resign</a>
+      <a onclick="nav('assets')" id="nav-assets"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Assets</a>
+      <div class="slabel">Compensation</div>
+      <a onclick="nav('salary')" id="nav-salary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Salary &amp; Bonus</a>
+      <div class="slabel">Reports</div>
+      <a onclick="nav('reports')" id="nav-reports"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Reports</a>
+      <div class="slabel" id="adminNav">Admin</div>
+      <a onclick="nav('settings')" id="nav-settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M4.93 4.93l1.41 1.41M22 12h-2M4 12H2M12 22v-2M12 4V2"/></svg>Settings</a>
+      <a onclick="nav('users')" id="nav-users"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>User Management</a>
+    </div>
+    <div style="margin-top:auto;padding:12px 20px;border-top:1px solid #2a2a28"><a onclick="doLogout()" style="font-size:12px;color:#7a7875;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</a></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="mob-menu-btn" onclick="openSidebar()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div class="tbar-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="Search employees..." id="globalSearch" onkeyup="globalSearchFn()"></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="btn btn-primary btn-sm" onclick="openNewEmpModal()">+ Add</button>
+        <label class="btn btn-secondary btn-sm" for="csvUpload" style="cursor:pointer">⬆ Import</label>
+        <input type="file" id="csvUpload" accept=".csv" onchange="importCSV(event)">
+      </div>
+    </div>
+    <div class="content-area" id="contentArea">
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">Dashboard</div><div style="font-size:12px;color:var(--muted)" id="dashScope">Workforce overview</div></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="exportDashboardCSV()">CSV</button><button class="btn btn-secondary btn-sm" onclick="exportDashboardPDF()">PDF</button></div>
+  </div>
+  <!-- Dashboard Filters -->
+  <div class="filter-bar" id="dashFilterBar">
+    <select class="fc" style="width:130px" id="dPeriod" onchange="renderDashboard()">
+      <option value="">All Time</option>
+      <option value="thisYear">This Year</option>
+      <option value="thisQ">This Quarter</option>
+      <option value="thisMonth">This Month</option>
+      <option value="last6m">Last 6 Months</option>
+      <option value="last12m">Last 12 Months</option>
+    </select>
+    <select class="fc" style="width:115px" id="dRegion" onchange="onDashRegionChange()">
+      <option value="">All Regions</option>
+      <option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option>
+    </select>
+    <select class="fc" style="width:140px" id="dDC" onchange="renderDashboard()"><option value="">All DC</option></select>
+    <button class="btn btn-secondary btn-sm" onclick="clearDashFilters()">Clear</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px" class="g4">
+    <div class="card"><div class="stat-lbl">Total Employees</div><div class="stat-val" id="kpi-total">0</div></div>
+    <div class="card"><div class="stat-lbl">Active</div><div class="stat-val" style="color:#16a34a" id="kpi-active">0</div></div>
+    <div class="card"><div class="stat-lbl">Resigned YTD</div><div class="stat-val" style="color:#dc2626" id="kpi-resigned">0</div></div>
+    <div class="card"><div class="stat-lbl">Avg Tenure</div><div class="stat-val" id="kpi-tenure">0y</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px" class="g3">
+    <div class="card"><div class="stat-lbl">DC Count</div><div class="stat-val" id="kpi-dc">0</div></div>
+    <div class="card"><div class="stat-lbl">ASM</div><div class="stat-val" id="kpi-asm">0</div></div>
+    <div class="card"><div class="stat-lbl">RSM</div><div class="stat-val" id="kpi-rsm">0</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:12px" class="g2">
+    <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Headcount by Region</div><div id="regionChart"></div></div>
+    <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Status Breakdown</div><div id="statusChart"></div></div>
+  </div>
+  <div class="table-wrap"><div style="padding:12px 14px;border-bottom:1px solid var(--border)"><div style="font-size:12.5px;font-weight:600">Recent Activity</div></div>
+    <div class="table-scroll"><table><thead><tr><th>Date</th><th>EMP ID</th><th>Name</th><th>Action</th><th>Detail</th><th>By</th></tr></thead><tbody id="recentActivityTable"></tbody></table></div></div>
+</div>
+
+<!-- EMPLOYEES -->
+<div class="page" id="page-employees">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">Employees</div><div style="font-size:12px;color:var(--muted)" id="empCount">-</div></div>
+    <div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="exportEmployeesCSV()">Export CSV</button><button class="btn btn-primary btn-sm" onclick="openNewEmpModal()">+ Add</button></div>
+  </div>
+  <div class="filter-bar">
+    <select class="fc" style="width:110px" id="fRegion" onchange="filterEmployees()"><option value="">All Regions</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select>
+    <select class="fc" style="width:130px" id="fDC" onchange="filterEmployees()"><option value="">All DC</option></select>
+    <select class="fc" style="width:110px" id="fRole" onchange="filterEmployees()"><option value="">All Roles</option><option>ASM</option><option>RSM</option><option>Salesman</option><option>HHT</option></select>
+    <select class="fc" style="width:110px" id="fStatus" onchange="filterEmployees()"><option value="">All Status</option><option>Active</option><option>Resigned</option><option>Transferred</option><option>Probation</option></select>
+    <input class="fc" style="width:150px" placeholder="Name / ID..." id="empSearch" oninput="filterEmployees()">
+    <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+  <div class="table-wrap"><div class="table-scroll"><table>
+    <thead><tr><th>EMP ID</th><th>Name</th><th>Role</th><th>DC</th><th>Region</th><th>Route</th><th>Status</th><th>Tenure</th><th>Actions</th></tr></thead>
+    <tbody id="empTable"></tbody>
+  </table></div></div>
+</div>
+
+<!-- TRANSFER / RESIGN -->
+<div class="page" id="page-transfer">
+  <div style="font-size:18px;font-weight:600;margin-bottom:4px">Transfer &amp; Resign</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Record movement and exit</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="g2">
+    <div class="card">
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Record Transfer</div>
+      <div class="fg"><label class="flabel">Employee</label><select class="fc" id="trEmp" onchange="autoFillTransfer()"><option value="">Select employee...</option></select></div>
+      <div class="fgrid">
+        <div class="fg"><label class="flabel">From DC</label><input class="fc" id="trFromDC" readonly style="background:#f0ede8"></div>
+        <div class="fg"><label class="flabel">To DC</label><select class="fc" id="trToDC"><option value="">Select DC...</option></select></div>
+      </div>
+      <div class="fg"><label class="flabel">New Route Code</label><select class="fc" id="trRoute" onchange="checkTransferRouteWarn(this.value)"><option value="">Keep current route</option></select></div>
+      <div id="trRouteWarn" style="display:none" class="ibox ibox-amber">⚠ Route นี้มีพนักงาน Active อยู่แล้ว กรุณาตรวจสอบ</div>
+      <div class="fg"><label class="flabel">Effective Date</label><input type="date" class="fc" id="trDate"></div>
+      <div class="fg"><label class="flabel">Remark</label><input class="fc" id="trRemark" placeholder="Optional..."></div>
+      <button class="btn btn-primary" onclick="recordTransfer()">Record Transfer</button>
+    </div>
+    <div class="card">
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Record Resignation</div>
+      <div class="fg"><label class="flabel">Employee</label><select class="fc" id="rsEmp"><option value="">Select employee...</option></select></div>
+      <div class="fg"><label class="flabel">Resign Date</label><input type="date" class="fc" id="rsDate"></div>
+      <div class="fg"><label class="flabel">Reason</label><select class="fc" id="rsReason"><option value="">Select reason...</option></select></div>
+      <div class="fg"><label class="flabel">Last Working Day</label><input type="date" class="fc" id="rsLWD"></div>
+      <div class="fg"><label class="flabel">Remark</label><input class="fc" id="rsRemark" placeholder="Additional notes..."></div>
+      <button class="btn btn-danger" onclick="recordResign()">Record Resignation</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <input class="fc" style="width:200px" placeholder="Search name / EMP ID..." id="movSearch" oninput="renderMovements()">
+    <select class="fc" style="width:120px" id="movType" onchange="renderMovements()"><option value="">All Types</option><option>Transfer</option><option>Resign</option><option>New Hire</option></select>
+  </div>
+  <div class="table-wrap"><div style="padding:12px 14px;border-bottom:1px solid var(--border)"><div style="font-size:12.5px;font-weight:600">Movement History</div></div>
+    <div class="table-scroll"><table><thead><tr><th>Date</th><th>EMP ID</th><th>Name</th><th>Type</th><th>From</th><th>To / Reason</th><th>Route</th><th>Remark</th></tr></thead><tbody id="movementTable"></tbody></table></div></div>
+</div>
+
+<!-- ASSETS -->
+<div class="page" id="page-assets">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">Asset Records</div><div style="font-size:12px;color:var(--muted)">Equipment assigned to employees</div></div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addAssetModal')">+ Assign Asset</button>
+  </div>
+  <div class="filter-bar">
+    <input class="fc" style="width:200px" placeholder="Search name / EMP ID..." id="assetSearch" oninput="filterAssets()">
+    <select class="fc" style="width:140px" id="fAssetType" onchange="filterAssets()"><option value="">All Types</option><option>HHT Device</option><option>SIM Card</option><option>Motorbike</option><option>Uniform</option><option>Other</option></select>
+    <select class="fc" style="width:110px" id="fAssetStatus" onchange="filterAssets()"><option value="">All Status</option><option>In Use</option><option>Returned</option></select>
+  </div>
+  <div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Asset ID</th><th>Employee</th><th>DC</th><th>Type</th><th>Description</th><th>Serial</th><th>Assigned</th><th>Status</th><th>Actions</th></tr></thead><tbody id="assetTable"></tbody></table></div></div>
+</div>
+
+<!-- SALARY -->
+<div class="page" id="page-salary">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">Salary &amp; Bonus</div><div style="font-size:12px;color:var(--muted)">Current = base + accumulated increases</div></div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addSalaryModal')">+ Adjustment</button>
+  </div>
+  <div class="filter-bar">
+    <input class="fc" style="width:200px" placeholder="Search name / EMP ID..." id="salSearch" oninput="renderSalaryTable()">
+    <select class="fc" style="width:110px" id="fSalRegion" onchange="renderSalaryTable()"><option value="">All Regions</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select>
+    <select class="fc" style="width:130px" id="fSalDC" onchange="renderSalaryTable()"><option value="">All DC</option></select>
+    <select class="fc" style="width:110px" id="fSalRole" onchange="renderSalaryTable()"><option value="">All Roles</option><option>ASM</option><option>RSM</option><option>Salesman</option><option>HHT</option></select>
+  </div>
+  <div class="table-wrap"><div class="table-scroll"><table>
+    <thead><tr><th>EMP ID</th><th>Name</th><th>Role</th><th>DC</th><th>Current Salary</th><th>Total Bonus</th><th>Last Increase</th><th>Date</th><th>Actions</th></tr></thead>
+    <tbody id="salaryTable"></tbody>
+  </table></div></div>
+</div>
+
+<!-- REPORTS -->
+<div class="page" id="page-reports">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">Reports</div><div style="font-size:12px;color:var(--muted)">Analyze and export workforce data</div></div>
+  </div>
+  <!-- Report Filters -->
+  <div class="filter-bar">
+    <select class="fc" style="width:130px" id="rPeriod" onchange="reRunReport()">
+      <option value="">All Time</option>
+      <option value="thisYear">This Year</option>
+      <option value="thisQ">This Quarter</option>
+      <option value="thisMonth">This Month</option>
+      <option value="last6m">Last 6 Months</option>
+      <option value="last12m">Last 12 Months</option>
+    </select>
+    <select class="fc" style="width:115px" id="rRegion" onchange="onReportRegionChange()">
+      <option value="">All Regions</option>
+      <option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option>
+    </select>
+    <select class="fc" style="width:140px" id="rDC" onchange="reRunReport()"><option value="">All DC</option></select>
+    <button class="btn btn-secondary btn-sm" onclick="clearReportFilters()">Clear</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px" class="g3">
+    <div class="card" style="cursor:pointer" onclick="runReport('headcount')"><div style="font-size:20px;margin-bottom:5px">👥</div><div style="font-weight:600;font-size:13px">Headcount</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">By region, DC, role</div></div>
+    <div class="card" style="cursor:pointer" onclick="runReport('turnover')"><div style="font-size:20px;margin-bottom:5px">📊</div><div style="font-weight:600;font-size:13px">Turnover</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Resign trends</div></div>
+    <div class="card" style="cursor:pointer" onclick="runReport('tenure')"><div style="font-size:20px;margin-bottom:5px">⏱</div><div style="font-weight:600;font-size:13px">Tenure</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Service length</div></div>
+    <div class="card" style="cursor:pointer" onclick="runReport('salary')"><div style="font-size:20px;margin-bottom:5px">💰</div><div style="font-weight:600;font-size:13px">Salary</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Compensation data</div></div>
+    <div class="card" style="cursor:pointer" onclick="runReport('assets')"><div style="font-size:20px;margin-bottom:5px">📦</div><div style="font-weight:600;font-size:13px">Assets</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Assignments</div></div>
+    <div class="card" style="cursor:pointer" onclick="runReport('movement')"><div style="font-size:20px;margin-bottom:5px">🔄</div><div style="font-weight:600;font-size:13px">Movement</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Transfers &amp; exits</div></div>
+  </div>
+  <div id="reportResult" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <div style="font-size:13px;font-weight:600" id="reportTitle"></div>
+      <div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="exportReportCSV()">CSV</button><button class="btn btn-secondary btn-sm" onclick="exportReportPDF()">PDF</button></div>
+    </div>
+    <div class="table-wrap"><div class="table-scroll"><table><thead id="reportThead"></thead><tbody id="reportTbody"></tbody></table></div></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div style="font-size:18px;font-weight:600;margin-bottom:14px">Settings</div>
+  <div class="stab-bar">
+    <button class="stab-btn active" onclick="switchSTab(this,'st-master')">Master Data</button>
+    <button class="stab-btn" onclick="switchSTab(this,'st-templates')">Import Templates</button>
+    <button class="stab-btn" onclick="switchSTab(this,'st-gas')">Google Sheet</button>
+  </div>
+  <div class="stab-panel active" id="st-master">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="g2">
+      <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Resign Reasons</div><div id="reasonList" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div><div style="display:flex;gap:6px"><input class="fc" id="newReason" placeholder="Add reason..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addReason()">Add</button></div></div>
+      <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Distribution Centers</div><div id="dcList" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div><div style="display:flex;gap:6px;flex-wrap:wrap"><input class="fc" id="newDCName" placeholder="DC Name" style="flex:1;min-width:80px"><select class="fc" id="newDCRegion" style="width:90px"><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select><button class="btn btn-primary btn-sm" onclick="addDC()">Add</button></div></div>
+      <div class="card" style="grid-column:span 1"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Route Codes <span id="routeConflictBadge" style="display:none;margin-left:6px" class="badge badge-resigned">⚠ Conflict</span></div><div id="routeList" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div><div style="display:flex;gap:6px"><input class="fc" id="newRoute" placeholder="e.g. R-A1" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addRoute()">Add</button></div></div>
+    </div>
+  </div>
+  <div class="stab-panel" id="st-templates">
+    <div class="ibox ibox-blue" style="margin-bottom:14px">ดาวน์โหลด Template CSV → กรอกข้อมูล → Import ที่ปุ่ม ⬆ Import บน topbar (ระบบตรวจจับประเภทอัตโนมัติจาก header)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" class="g3">
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:4px">👤 Employees</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">ข้อมูลพนักงาน รวม DC, Route, Salary</div><div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace;line-height:1.6">empID, firstNameTH, lastNameTH<br>role, region, dc, route<br>startDate, salary, status...</div><button class="btn btn-secondary btn-sm" onclick="dlTemplate('employees')">⬇ Download</button></div>
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:4px">📦 Assets</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Asset ที่กำหนดให้พนักงาน</div><div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace;line-height:1.6">empID, type, serial<br>desc, date</div><button class="btn btn-secondary btn-sm" onclick="dlTemplate('assets')">⬇ Download</button></div>
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:4px">💰 Salary</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">ประวัติเงินเดือน / โบนัส</div><div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace;line-height:1.6">empID, type, amount<br>date, remark</div><button class="btn btn-secondary btn-sm" onclick="dlTemplate('salary')">⬇ Download</button></div>
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:4px">🔄 Movement</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Transfer / Resign history</div><div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace;line-height:1.6">empID, type, from, to<br>route, date, remark</div><button class="btn btn-secondary btn-sm" onclick="dlTemplate('history')">⬇ Download</button></div>
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:4px">🏢 DC &amp; Routes</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Master data DC และ Route</div><div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:'DM Mono',monospace;line-height:1.6">type (DC or Route)<br>name, region, label</div><button class="btn btn-secondary btn-sm" onclick="dlTemplate('dc_routes')">⬇ Download</button></div>
+      <div class="card"><div style="font-size:13px;font-weight:600;margin-bottom:6px">📋 Import Rules</div><ul style="font-size:11.5px;color:var(--muted);padding-left:16px;margin:0;line-height:2"><li>บรรทัดแรก = header</li><li>Encoding: UTF-8</li><li>empID ซ้ำ → skip</li><li>Route Active ซ้ำ → warn</li><li>ระบบตรวจ header อัตโนมัติ</li></ul></div>
+    </div>
+  </div>
+  <div class="stab-panel" id="st-gas">
+    <div style="max-width:540px"><div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Google Apps Script Connection</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">เชื่อมต่อกับ Google Sheet เพื่อ sync ข้อมูลแบบ real-time</div><div class="fg"><label class="flabel">Web App URL</label><input class="fc" id="gasURL" placeholder="https://script.google.com/macros/s/.../exec"></div><button class="btn btn-primary btn-sm" onclick="saveGASUrl()">Save &amp; Test</button><div id="gasStatus" style="font-size:11.5px;margin-top:8px"></div><div style="margin-top:14px;padding:12px;background:#f8f7f5;border-radius:8px;font-size:11.5px;color:var(--muted)"><strong>ขั้นตอน:</strong><br>1. Google Sheets → Extensions → Apps Script<br>2. วาง code.gs ที่ได้รับ<br>3. Deploy → Web App → Anyone<br>4. Copy URL มาวางด้านบน</div></div></div>
+  </div>
+</div>
+
+<!-- USERS -->
+<div class="page" id="page-users">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600">User Management</div><div style="font-size:12px;color:var(--muted)">System access &amp; permissions</div></div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ Add User</button>
+  </div>
+  <div class="table-wrap"><div class="table-scroll"><table>
+    <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Region</th><th>DC Access</th><th>Permission</th><th>Actions</th></tr></thead>
+    <tbody id="userTable"></tbody>
+  </table></div></div>
+</div>
+
+    </div></div></div><!-- content/main/appshell -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="addEmployeeModal"><div class="modal">
+  <div class="modal-header"><div style="font-size:15px;font-weight:600" id="addEmpTitle">Add New Employee</div><button onclick="closeModal('addEmployeeModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="editEmpId">
+    <div class="stitle">Basic Information</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Employee ID</label><input class="fc" id="empID" readonly style="background:#f0ede8;font-family:'DM Mono',monospace;font-size:12px" placeholder="Auto-generated"></div>
+      <div class="fg"><label class="flabel">Start Date *</label><input type="date" class="fc" id="empStartDate"></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">ชื่อ (TH) *</label><input class="fc" id="empFirstNameTH" placeholder="ชื่อ"></div>
+      <div class="fg"><label class="flabel">นามสกุล (TH) *</label><input class="fc" id="empLastNameTH" placeholder="นามสกุล"></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">First Name (EN)</label><input class="fc" id="empFirstNameEN"></div>
+      <div class="fg"><label class="flabel">Last Name (EN)</label><input class="fc" id="empLastNameEN"></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">National ID</label><input class="fc" id="empNatID" placeholder="13 digits"></div>
+      <div class="fg"><label class="flabel">Date of Birth</label><input type="date" class="fc" id="empDOB"></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Phone</label><input class="fc" id="empPhone"></div>
+      <div class="fg"><label class="flabel">Education</label><select class="fc" id="empEdu"><option>มัธยมศึกษา</option><option>ปวช.</option><option>ปวส.</option><option>ปริญญาตรี</option><option>สูงกว่าปริญญาตรี</option></select></div>
+    </div>
+    <div class="stitle">Work Assignment</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Role *</label><select class="fc" id="empRole" onchange="onRoleChange()"><option>Salesman</option><option>HHT</option><option>ASM</option><option>RSM</option><option>RTM</option><option>GTH</option><option>TMK</option><option>LCA</option><option>Sales Capability</option></select></div>
+      <div class="fg"><label class="flabel">Region *</label><select class="fc" id="empRegion" onchange="populateDCDropdown('empDC',this.value);populateReportsList()"><option value="">Select...</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">DC *</label><select class="fc" id="empDC" onchange="populateReportsList()"><option value="">Select Region first</option></select></div>
+      <div class="fg">
+        <label class="flabel">Route Code</label>
+        <select class="fc" id="empRoute" onchange="checkEmpRouteWarn(this.value)"><option value="">No Route</option></select>
+        <div id="empRouteWarn" style="display:none;margin-top:4px" class="ibox ibox-amber">⚠ Route นี้มีพนักงาน Active อยู่แล้ว</div>
+      </div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel" id="reportsToLabel">Reports To (ASM)</label><select class="fc" id="empReportsTo"><option value="">None</option></select></div>
+      <div class="fg"><label class="flabel">Status</label><select class="fc" id="empStatus"><option>Active</option><option>Probation</option></select></div>
+    </div>
+    <div class="stitle">Compensation</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Base Salary (THB)</label><input type="number" class="fc" id="empSalary" placeholder="0"></div>
+      <div class="fg"><label class="flabel">Probation End Date</label><input type="date" class="fc" id="empProbEnd"></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addEmployeeModal')">Cancel</button><button class="btn btn-primary" onclick="saveEmployee()">Save Employee</button></div>
+</div></div>
+
+<div class="modal-overlay" id="empDetailModal"><div class="modal" style="max-width:720px">
+  <div class="modal-header"><div><div style="font-size:15px;font-weight:600" id="detailEmpName">-</div><div style="font-size:11.5px;color:var(--muted)" id="detailEmpID"></div></div><button onclick="closeModal('empDetailModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body" id="empDetailBody"></div>
+</div></div>
+
+<div class="modal-overlay" id="addAssetModal"><div class="modal" style="max-width:480px">
+  <div class="modal-header"><div style="font-size:15px;font-weight:600">Assign Asset</div><button onclick="closeModal('addAssetModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <div class="fg"><label class="flabel">Employee</label><select class="fc" id="assetEmp"></select></div>
+    <div class="fgrid"><div class="fg"><label class="flabel">Asset Type</label><select class="fc" id="assetType"><option>HHT Device</option><option>SIM Card</option><option>Motorbike</option><option>Uniform</option><option>Other</option></select></div><div class="fg"><label class="flabel">Serial / ID</label><input class="fc" id="assetSerial" placeholder="SN or code"></div></div>
+    <div class="fg"><label class="flabel">Description</label><input class="fc" id="assetDesc"></div>
+    <div class="fg"><label class="flabel">Assigned Date</label><input type="date" class="fc" id="assetDate"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addAssetModal')">Cancel</button><button class="btn btn-primary" onclick="saveAsset()">Assign</button></div>
+</div></div>
+
+<div class="modal-overlay" id="addSalaryModal"><div class="modal" style="max-width:480px">
+  <div class="modal-header"><div style="font-size:15px;font-weight:600">Salary Adjustment</div><button onclick="closeModal('addSalaryModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <div class="fg"><label class="flabel">Employee</label><select class="fc" id="salEmp" onchange="showCurrentSalary()"></select></div>
+    <div id="currentSalaryInfo" class="ibox ibox-gray">Select employee</div>
+    <div class="fg"><label class="flabel">Type</label><select class="fc" id="salType" onchange="updateSalaryHelp()"><option value="Salary Increase">Salary Increase (เพิ่มจากปัจจุบัน)</option><option value="Bonus">Bonus (จ่ายครั้งเดียว)</option><option value="Correction">Correction (ตั้งใหม่)</option></select></div>
+    <div id="salaryHelp" class="ibox ibox-blue">Salary Increase: ใส่จำนวนที่เพิ่ม → บวกเข้าเงินเดือนปัจจุบัน</div>
+    <div class="fgrid"><div class="fg"><label class="flabel">Amount (THB)</label><input type="number" class="fc" id="salAmount" placeholder="0" oninput="previewNewSalary()"></div><div class="fg"><label class="flabel">Effective Date</label><input type="date" class="fc" id="salDate"></div></div>
+    <div id="salaryPreview" style="display:none" class="ibox ibox-green"></div>
+    <div class="fg"><label class="flabel">Remark</label><input class="fc" id="salRemark" placeholder="Reason..."></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addSalaryModal')">Cancel</button><button class="btn btn-primary" onclick="saveSalary()">Save</button></div>
+</div></div>
+
+<div class="modal-overlay" id="addUserModal"><div class="modal" style="max-width:500px">
+  <div class="modal-header"><div style="font-size:15px;font-weight:600" id="userModalTitle">Add System User</div><button onclick="closeModal('addUserModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="editUserIdx">
+    <div class="fgrid"><div class="fg"><label class="flabel">Username</label><input class="fc" id="newUsername" placeholder="e.g. asm01"></div><div class="fg"><label class="flabel">Password</label><input class="fc" id="newPassword" type="password" placeholder="••••••"></div></div>
+    <div class="fgrid"><div class="fg"><label class="flabel">Full Name</label><input class="fc" id="newUserName"></div><div class="fg"><label class="flabel">System Role</label><select class="fc" id="newUserRole"><option>Admin</option><option>RSM</option><option>ASM</option><option>HR</option><option>Viewer</option></select></div></div>
+    <div class="fgrid"><div class="fg"><label class="flabel">Region Access</label><select class="fc" id="newUserRegion"><option value="">All Regions</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select></div><div class="fg"><label class="flabel">DC Access</label><select class="fc" id="newUserDC"><option value="">All DC</option></select></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button><button class="btn btn-primary" onclick="saveUser()">Save User</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<script>
+// DATA STORE
+const GAS_KEY='hr_gas_url';
+let GAS_URL=localStorage.getItem(GAS_KEY)||'';
+let DB={
+  employees:JSON.parse(localStorage.getItem('hr_employees')||'[]'),
+  history:JSON.parse(localStorage.getItem('hr_history')||'[]'),
+  assets:JSON.parse(localStorage.getItem('hr_assets')||'[]'),
+  salary:JSON.parse(localStorage.getItem('hr_salary')||'[]'),
+  users:JSON.parse(localStorage.getItem('hr_users')||'[]'),
+  reasons:JSON.parse(localStorage.getItem('hr_reasons')||'["ลาออกเอง","สัญญาหมดอายุ","ปฏิบัติงานไม่ผ่าน","ย้ายที่อยู่","สุขภาพ","ค่าตอบแทนต่ำ","หางานใหม่","อื่นๆ"]'),
+  dcs:JSON.parse(localStorage.getItem('hr_dcs')||'[]'),
+  routes:JSON.parse(localStorage.getItem('hr_routes')||'[]'),
+};
+let currentUser=null;
+let USERS=DB.users.length?DB.users:[
+  {username:'admin',password:'1234',name:'Admin User',role:'Admin',region:'',dc:''},
+  {username:'asm01',password:'1234',name:'ASM นายสมชาย',role:'ASM',region:'NOR',dc:'DC-NOR-01'},
+  {username:'rsm01',password:'1234',name:'RSM นางสาวมานี',role:'RSM',region:'NOR',dc:''},
+];
+function saveDB(k){localStorage.setItem('hr_'+k,JSON.stringify(DB[k]));}
+async function gasCall(p){if(!GAS_URL)return null;try{const r=await fetch(GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&'));return await r.json();}catch(e){return null;}}
+
+// ── PERMISSION SCOPE ──────────────────────────────────────────
+function userScope(){
+  if(!currentUser||currentUser.role==='Admin'||currentUser.role==='HR')return null;
+  return{role:currentUser.role,region:currentUser.region||'',dc:currentUser.dc||''};
+}
+function applyScope(data){
+  const sc=userScope();if(!sc)return data;
+  if(sc.role==='ASM'&&sc.dc)return data.filter(e=>e.dc===sc.dc);
+  if(sc.role==='RSM'&&sc.region)return data.filter(e=>e.region===sc.region);
+  return data;
+}
+
+// ── ROUTE CONFLICT ────────────────────────────────────────────
+function getActiveRoutes(excludeId){
+  return DB.employees.filter(e=>e.status==='Active'&&e.route&&e.empID!==excludeId).map(e=>e.route);
+}
+function isRouteTaken(route,excludeId){
+  return route?getActiveRoutes(excludeId).includes(route):false;
+}
+function getRouteOwner(route,excludeId){
+  return DB.employees.find(e=>e.route===route&&e.status==='Active'&&e.empID!==excludeId);
+}
+function checkEmpRouteWarn(route){
+  const editId=document.getElementById('editEmpId').value;
+  const w=document.getElementById('empRouteWarn');
+  const sel=document.getElementById('empRoute');
+  if(route&&isRouteTaken(route,editId)){
+    const o=getRouteOwner(route,editId);
+    w.textContent='⚠ Route '+route+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+'(Active) อยู่แล้ว';
+    w.style.display='block';sel.classList.add('warn');
+  }else{w.style.display='none';sel.classList.remove('warn');}
+}
+function checkTransferRouteWarn(route){
+  const empId=document.getElementById('trEmp').value;
+  const w=document.getElementById('trRouteWarn');
+  if(route&&isRouteTaken(route,empId)){
+    const o=getRouteOwner(route,empId);
+    w.textContent='⚠ Route '+route+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+'(Active)';
+    w.style.display='block';
+  }else{w.style.display='none';}
+}
+
+// ── AUTH ──────────────────────────────────────────────────────
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const user=USERS.find(x=>x.username===u&&x.password===p);
+  if(!user){document.getElementById('loginError').style.display='block';return;}
+  currentUser=user;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('sidebarName').textContent=user.name;
+  document.getElementById('sidebarRole').textContent=user.role+(user.region?' · '+user.region:'')+(user.dc?' · '+user.dc:'');
+  document.getElementById('sidebarAvatar').textContent=user.name.substring(0,2).toUpperCase();
+  const isAdmin=user.role==='Admin',isHR=user.role==='HR';
+  document.getElementById('nav-users').style.display=isAdmin?'':'none';
+  document.getElementById('nav-settings').style.display=(isAdmin||isHR)?'':'none';
+  document.getElementById('adminNav').style.display=isAdmin?'':'none';
+  initApp();nav('dashboard');
+}
+function doLogout(){currentUser=null;document.getElementById('loginScreen').style.display='flex';document.getElementById('loginError').style.display='none';}
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
+
+// ── INIT ──────────────────────────────────────────────────────
+function initApp(){
+  if(!DB.dcs.length){
+    DB.dcs=[{name:'DC-NOR-01',region:'NOR',label:'เชียงใหม่'},{name:'DC-NOR-02',region:'NOR',label:'เชียงราย'},{name:'DC-NOR-03',region:'NOR',label:'ลำปาง'},{name:'DC-NOE-01',region:'NOE',label:'ขอนแก่น'},{name:'DC-NOE-02',region:'NOE',label:'อุดรธานี'},{name:'DC-NOE-03',region:'NOE',label:'นครราชสีมา'},{name:'DC-BKKCT-01',region:'BKKCT',label:'กรุงเทพ N'},{name:'DC-BKKCT-02',region:'BKKCT',label:'กรุงเทพ S'},{name:'DC-BKKCT-03',region:'BKKCT',label:'นนทบุรี'},{name:'DC-SOU-01',region:'SOU',label:'สุราษฎร์ธานี'},{name:'DC-SOU-02',region:'SOU',label:'ภูเก็ต'},{name:'DC-SOU-03',region:'SOU',label:'หาดใหญ่'}];saveDB('dcs');
+  }
+  if(!DB.routes.length){DB.routes=['R-A1','R-A2','R-B1','R-B2','R-C1','R-C2','R-D1','R-D2','R-E1','R-E2'];saveDB('routes');}
+  if(!DB.employees.length)seedEmployees();
+  populateAllDropdowns();initDashDCDropdown();initReportDCDropdown();renderDashboard();renderEmployeeTable();renderSettings();renderUsers();renderMovements();renderAssetTable();renderSalaryTable();populateTransferDropdowns();populateSalaryDCFilter();
+}
+function seedEmployees(){
+  const roles=['Salesman','Salesman','Salesman','HHT','ASM','RSM'];
+  const names=[['สมชาย','มานะดี'],['สุดา','รักดี'],['ประยุทธ','สมบูรณ์'],['มานี','ใจดี'],['วิชัย','ทองดี'],['สมพร','แสงทอง'],['นิภา','สุขใส'],['บุญมา','คงดี'],['อรรถพล','วิเศษ'],['กนิษฐา','พรเจริญ'],['ธนพล','ศิริสุข'],['พรทิพย์','เจริญรุ่ง'],['สุรชัย','มงคล'],['อัมพร','ดีงาม'],['ประสาน','สุวรรณ'],['รัตนา','ใสสว่าง'],['เอกชัย','วงษ์ดี'],['ศิริพร','ขจรกิตติ'],['ไพรัตน์','จันทร์ดี'],['วรรณา','อาจหาญ']];
+  const statuses=['Active','Active','Active','Active','Active','Active','Active','Probation','Resigned','Transferred'];
+  const usedRoutes=new Set();
+  for(let i=0;i<25;i++){
+    const nm=names[i%names.length];const dc=DB.dcs[i%DB.dcs.length];
+    const startDate=new Date(2020+(i%5),i%12,(i%28)+1);
+    const status=i<20?statuses[i%8]:'Active';const baseSal=15000+(i*800);
+    let route='';
+    if(status==='Active'||status==='Probation'){route=DB.routes.find(r=>!usedRoutes.has(r))||'';if(route)usedRoutes.add(route);}
+    const emp={empID:genEmpID(),firstNameTH:nm[0],lastNameTH:nm[1],firstNameEN:'',lastNameEN:'',natID:'1'+String(Math.floor(Math.random()*1e12)).padStart(12,'0'),dob:'1990-01-01',phone:'08'+Math.floor(Math.random()*1e8).toString().padStart(8,'0'),edu:'ปริญญาตรี',role:roles[i%roles.length],region:dc.region,dc:dc.name,route,reportsTo:'',status,salary:baseSal,probEnd:'',startDate:startDate.toISOString().split('T')[0],resignDate:status==='Resigned'?'2025-03-01':'',resignReason:status==='Resigned'?'ลาออกเอง':'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:'admin'};
+    DB.employees.push(emp);
+    DB.salary.push({empID:emp.empID,type:'Initial',amount:baseSal,date:emp.startDate,remark:'Starting salary'});
+    if(status==='Resigned')DB.history.push({date:'2025-03-01',empID:emp.empID,name:nm[0]+' '+nm[1],type:'Resign',from:dc.name,to:'ลาออกเอง',route:'',remark:'',by:'admin'});
+  }
+  saveDB('employees');saveDB('salary');saveDB('history');
+}
+let _ec=0;
+function genEmpID(){_ec++;return 'EMP-'+new Date().getFullYear()+'-'+String(DB.employees.length+_ec).padStart(4,'0');}
+
+// ── NAV ───────────────────────────────────────────────────────
+function nav(name){
+  closeSidebar();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const n=document.getElementById('nav-'+name);if(n)n.classList.add('active');
+  if(name==='dashboard')renderDashboard();
+  if(name==='employees')renderEmployeeTable();
+  if(name==='transfer'){renderMovements();populateTransferDropdowns();}
+  if(name==='assets'){renderAssetTable();populateAssetEmpDropdown();}
+  if(name==='salary'){renderSalaryTable();populateSalaryDCFilter();}
+  if(name==='reports'){initReportDCDropdown();}
+  if(name==='settings')renderSettings();
+  if(name==='users')renderUsers();
+}
+
+// ── DROPDOWNS ─────────────────────────────────────────────────
+function populateDCDropdown(selId,region){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">Select DC...</option>';
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{const o=document.createElement('option');o.value=d.name;o.textContent=d.name+' ('+d.label+')';sel.appendChild(o);});
+  if(prev)sel.value=prev;
+}
+function populateDCFilter(){
+  const sel=document.getElementById('fDC');if(!sel)return;
+  sel.innerHTML='<option value="">All DC</option>';
+  DB.dcs.forEach(d=>{sel.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+}
+function populateSalaryDCFilter(){
+  const sel=document.getElementById('fSalDC');if(!sel)return;
+  sel.innerHTML='<option value="">All DC</option>';
+  DB.dcs.forEach(d=>{sel.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+}
+function populateRouteDropdown(selId,excludeId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const prev=sel.value;
+  const taken=getActiveRoutes(excludeId);
+  sel.innerHTML='<option value="">No Route</option>';
+  DB.routes.forEach(r=>{
+    const isTaken=taken.includes(r);
+    const opt=document.createElement('option');
+    opt.value=r;opt.textContent=r+(isTaken?' ⚠ (Taken)':'');
+    if(isTaken)opt.style.color='#dc2626';
+    sel.appendChild(opt);
+  });
+  if(prev)sel.value=prev;
+}
+function populateTransferRouteDropdown(empId){
+  const sel=document.getElementById('trRoute');if(!sel)return;
+  const emp=DB.employees.find(e=>e.empID===empId);
+  const cur=emp?.route||'';
+  const taken=getActiveRoutes(empId);
+  sel.innerHTML=`<option value="">Keep current${cur?' ('+cur+')':''}</option>`;
+  DB.routes.forEach(r=>{
+    const isTaken=taken.includes(r);
+    const opt=document.createElement('option');
+    opt.value=r;opt.textContent=r+(isTaken?' ⚠ (Taken)':'');
+    if(isTaken)opt.style.color='#dc2626';
+    sel.appendChild(opt);
+  });
+}
+function populateAllDropdowns(){
+  populateDCFilter();
+  const editId=document.getElementById('editEmpId')?.value||'';
+  populateRouteDropdown('empRoute',editId);
+  const nuDC=document.getElementById('newUserDC');
+  if(nuDC){nuDC.innerHTML='<option value="">All DC</option>';DB.dcs.forEach(d=>{nuDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});}
+  ['assetEmp','salEmp'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='';
+    applyScope(DB.employees).filter(e=>e.status!=='Resigned').forEach(e=>{sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} (${e.empID})</option>`;});
+  });
+}
+function populateTransferDropdowns(){
+  const sc=userScope();
+  let eligible=DB.employees.filter(e=>e.status==='Active'||e.status==='Probation');
+  if(sc){if(sc.role==='ASM'&&sc.dc)eligible=eligible.filter(e=>e.dc===sc.dc);else if(sc.role==='RSM'&&sc.region)eligible=eligible.filter(e=>e.region===sc.region);}
+  const opts=eligible.map(e=>`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} (${e.empID} · ${e.dc})</option>`).join('');
+  ['trEmp','rsEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select employee...</option>'+opts;});
+  const dcOpts=DB.dcs.map(d=>`<option value="${d.name}">${d.name} (${d.label})</option>`).join('');
+  const trDC=document.getElementById('trToDC');if(trDC)trDC.innerHTML='<option value="">Select DC...</option>'+dcOpts;
+  const rsR=document.getElementById('rsReason');
+  if(rsR)rsR.innerHTML='<option value="">Select reason...</option>'+DB.reasons.map(r=>`<option>${r}</option>`).join('');
+}
+function populateAssetEmpDropdown(){
+  const sel=document.getElementById('assetEmp');if(!sel)return;sel.innerHTML='';
+  applyScope(DB.employees).filter(e=>e.status!=='Resigned').forEach(e=>{sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} (${e.empID})</option>`;});
+}
+// ── Reports To: context-aware ─────────────────────────────────
+function onRoleChange(){populateReportsList();}
+function populateReportsList(){
+  const role=document.getElementById('empRole').value;
+  const dc=document.getElementById('empDC').value;
+  const region=document.getElementById('empRegion').value;
+  const sel=document.getElementById('empReportsTo');
+  const lbl=document.getElementById('reportsToLabel');
+  if(!sel)return;
+  sel.innerHTML='<option value="">None</option>';
+  if(role==='RSM'){
+    lbl.textContent='Reports To (HQ)';
+  }else if(role==='ASM'){
+    lbl.textContent='Reports To (RSM)';
+    DB.employees.filter(e=>e.role==='RSM'&&(!region||e.region===region)).forEach(e=>{
+      sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} · ${e.region}</option>`;
+    });
+  }else{
+    lbl.textContent='Reports To (ASM)';
+    DB.employees.filter(e=>e.role==='ASM'&&(!dc||e.dc===dc)).forEach(e=>{
+      sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} · ${e.dc}</option>`;
+    });
+  }
+}
+function autoFillTransfer(){
+  const empId=document.getElementById('trEmp').value;
+  const emp=DB.employees.find(e=>e.empID===empId);
+  document.getElementById('trFromDC').value=emp?emp.dc:'';
+  document.getElementById('trRouteWarn').style.display='none';
+  if(emp)populateTransferRouteDropdown(empId);
+}
+
+// ── PERIOD FILTER HELPER ──────────────────────────────────────
+function getPeriodRange(period){
+  const now=new Date();const y=now.getFullYear();const m=now.getMonth();
+  if(!period)return null;
+  if(period==='thisYear')return{start:new Date(y,0,1),end:now};
+  if(period==='thisMonth')return{start:new Date(y,m,1),end:now};
+  if(period==='thisQ'){const q=Math.floor(m/3);return{start:new Date(y,q*3,1),end:now};}
+  if(period==='last6m')return{start:new Date(now-1000*60*60*24*180),end:now};
+  if(period==='last12m')return{start:new Date(now-1000*60*60*24*365),end:now};
+  return null;
+}
+function filterByPeriod(emps,period,dateField){
+  const r=getPeriodRange(period);if(!r)return emps;
+  return emps.filter(e=>{if(!e[dateField])return false;const d=new Date(e[dateField]);return d>=r.start&&d<=r.end;});
+}
+function onDashRegionChange(){
+  const region=document.getElementById('dRegion').value;
+  const dDC=document.getElementById('dDC');
+  dDC.innerHTML='<option value="">All DC</option>';
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{dDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  renderDashboard();
+}
+function clearDashFilters(){
+  ['dPeriod','dRegion','dDC'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const dDC=document.getElementById('dDC');dDC.innerHTML='<option value="">All DC</option>';DB.dcs.forEach(d=>{dDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  renderDashboard();
+}
+function initDashDCDropdown(){
+  const el=document.getElementById('dDC');if(!el)return;
+  const sc=userScope();
+  const region=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:'';
+  el.innerHTML='<option value="">All DC</option>';
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{el.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function renderDashboard(){
+  initDashDCDropdown();
+  const sc=userScope();
+  const period=document.getElementById('dPeriod')?.value||'';
+  const filterRegion=document.getElementById('dRegion')?.value||'';
+  const filterDC=document.getElementById('dDC')?.value||'';
+
+  // Lock filters per role:
+  // Admin → free (no lock)
+  // RSM   → Region locked to their region; DC free (can filter within their region)
+  // ASM   → Region locked; DC locked to their DC
+  const dRegEl=document.getElementById('dRegion');const dDCEl=document.getElementById('dDC');
+  if(sc){
+    if(sc.role==='RSM'){
+      if(dRegEl){dRegEl.value=sc.region;dRegEl.disabled=true;}
+      if(dDCEl){dDCEl.disabled=false;dDCEl.style.display='';}
+    }else if(sc.role==='ASM'){
+      if(dRegEl){dRegEl.value=sc.region;dRegEl.disabled=true;}
+      if(dDCEl){dDCEl.value=sc.dc;dDCEl.disabled=true;dDCEl.style.display='';}
+    }
+  }else{
+    if(dRegEl)dRegEl.disabled=false;
+    if(dDCEl){dDCEl.disabled=false;dDCEl.style.display='';}
+  }
+
+  // Effective filters
+  let all=applyScope(DB.employees);
+  // RSM: region is locked but DC can be freely filtered within that region
+  const effRegion=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:filterRegion;
+  const effDC=sc&&sc.role==='ASM'?sc.dc:filterDC;
+  if(effRegion)all=all.filter(e=>e.region===effRegion);
+  if(effDC)all=all.filter(e=>e.dc===effDC);
+
+  // For startDate-based KPIs use period; resigned uses resignDate
+  const total=all.length;
+  const active=all.filter(e=>e.status==='Active').length;
+  let resigned;
+  if(period){
+    const r=getPeriodRange(period);
+    resigned=r?all.filter(e=>e.status==='Resigned'&&e.resignDate&&new Date(e.resignDate)>=r.start&&new Date(e.resignDate)<=r.end).length:0;
+  }else{
+    const yr=new Date().getFullYear().toString();
+    resigned=all.filter(e=>e.status==='Resigned'&&(e.resignDate||'').startsWith(yr)).length;
+  }
+  const avgT=all.filter(e=>e.startDate).reduce((s,e)=>(s+(new Date()-new Date(e.startDate))/(1000*60*60*24*365.25)),0)/(total||1);
+
+  document.getElementById('kpi-total').textContent=total;
+  document.getElementById('kpi-active').textContent=active;
+  document.getElementById('kpi-resigned').textContent=resigned;
+  document.getElementById('kpi-tenure').textContent=avgT.toFixed(1)+'y';
+  document.getElementById('kpi-dc').textContent=[...new Set(all.map(e=>e.dc))].length;
+  document.getElementById('kpi-asm').textContent=all.filter(e=>e.role==='ASM').length;
+  document.getElementById('kpi-rsm').textContent=all.filter(e=>e.role==='RSM').length;
+
+  // Scope label
+  const parts=[];
+  if(sc)parts.push(sc.role+' View');
+  if(effDC)parts.push(effDC);else if(effRegion)parts.push(effRegion);else if(!sc)parts.push('All Regions');
+  if(period)parts.push({thisYear:'This Year',thisQ:'This Quarter',thisMonth:'This Month',last6m:'Last 6M',last12m:'Last 12M'}[period]||period);
+  document.getElementById('dashScope').textContent=parts.join(' · ');
+
+  // Charts
+  const rcEl=document.getElementById('regionChart');rcEl.innerHTML='';
+  const regions=effDC?[...new Set(all.map(e=>e.region))]:['NOR','NOE','BKKCT','SOU'];
+  regions.forEach(r=>{
+    const cnt=all.filter(e=>e.region===r).length;const pct=total?Math.round(cnt/total*100):0;
+    rcEl.innerHTML+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:70px;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r}</div><div style="flex:1" class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:11.5px;font-weight:500;width:24px;text-align:right">${cnt}</div></div>`;
+  });
+  const scEl=document.getElementById('statusChart');scEl.innerHTML='';
+  const sC={Active:'#16a34a',Probation:'#ca8a04',Resigned:'#dc2626',Transferred:'#2563eb'};
+  Object.entries(sC).forEach(([s,c])=>{
+    const cnt=all.filter(e=>e.status===s).length;const pct=total?Math.round(cnt/total*100):0;
+    scEl.innerHTML+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:76px;font-size:11.5px;color:var(--muted)">${s}</div><div style="flex:1" class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c}"></div></div><div style="font-size:11.5px;font-weight:500;width:24px;text-align:right">${cnt}</div></div>`;
+  });
+
+  // Recent activity
+  const tbody=document.getElementById('recentActivityTable');
+  let recent=[...DB.history].reverse();
+  // Scope
+  if(sc){recent=recent.filter(h=>{const emp=DB.employees.find(e=>e.empID===h.empID);if(!emp)return false;if(sc.role==='ASM')return emp.dc===sc.dc;if(sc.role==='RSM')return emp.region===sc.region;return true;});}
+  // Extra region/DC filter on history
+  if(effDC)recent=recent.filter(h=>DB.employees.find(e=>e.empID===h.empID)?.dc===effDC);
+  else if(effRegion)recent=recent.filter(h=>DB.employees.find(e=>e.empID===h.empID)?.region===effRegion);
+  // Period filter on history
+  if(period){const r=getPeriodRange(period);if(r)recent=recent.filter(h=>h.date&&new Date(h.date)>=r.start&&new Date(h.date)<=r.end);}
+  tbody.innerHTML=recent.slice(0,10).map(h=>`<tr><td>${h.date}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${h.empID}</td><td>${h.name}</td><td><span class="badge ${h.type==='Resign'?'badge-resigned':h.type==='Transfer'?'badge-transferred':'badge-active'}">${h.type}</span></td><td style="color:var(--muted)">${h.to||'-'}</td><td style="color:var(--muted)">${h.by||'-'}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No activity</td></tr>';
+}
+
+// ── EMPLOYEES ─────────────────────────────────────────────────
+function getFilteredEmployees(){
+  let data=applyScope(DB.employees);
+  const region=document.getElementById('fRegion')?.value;
+  const dc=document.getElementById('fDC')?.value;
+  const role=document.getElementById('fRole')?.value;
+  const status=document.getElementById('fStatus')?.value;
+  const search=document.getElementById('empSearch')?.value.toLowerCase();
+  if(region)data=data.filter(e=>e.region===region);
+  if(dc)data=data.filter(e=>e.dc===dc);
+  if(role)data=data.filter(e=>e.role===role);
+  if(status)data=data.filter(e=>e.status===status);
+  if(search)data=data.filter(e=>(e.firstNameTH+' '+e.lastNameTH+' '+e.empID+' '+e.dc).toLowerCase().includes(search));
+  return data;
+}
+function renderEmployeeTable(){
+  const data=getFilteredEmployees();
+  document.getElementById('empCount').textContent=data.length+' employees';
+  const tbody=document.getElementById('empTable');
+  tbody.innerHTML=data.length?data.map(e=>{
+    const t=e.startDate?calcTenure(e.startDate,e.status==='Resigned'&&e.resignDate?e.resignDate:null):'-';
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td style="font-weight:500">${e.firstNameTH} ${e.lastNameTH}</td><td><span class="ptag">${e.role}</span></td><td style="font-size:12px">${e.dc}</td><td>${e.region}</td><td style="font-family:'DM Mono',monospace;font-size:11.5px">${e.route||'-'}</td><td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td><td style="font-size:12px">${t}</td><td><div style="display:flex;gap:4px"><button class="btn btn-secondary btn-sm" onclick="viewEmployee('${e.empID}')">View</button><button class="btn btn-secondary btn-sm" onclick="editEmployee('${e.empID}')">Edit</button></div></td></tr>`;
+  }).join(''):'<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">No employees found</td></tr>';
+}
+function filterEmployees(){renderEmployeeTable();}
+function clearFilters(){['fRegion','fDC','fRole','fStatus','empSearch'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});renderEmployeeTable();}
+function calcTenure(s,e){const st=new Date(s),en=e?new Date(e):new Date();const y=(en-st)/(1000*60*60*24*365.25);return y<1?Math.floor(y*12)+'m':y.toFixed(1)+'y';}
+function getCurrentSalary(empId){
+  const emp=DB.employees.find(e=>e.empID===empId);
+  const sals=DB.salary.filter(s=>s.empID===empId).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let base=emp?.salary||0;
+  sals.forEach(s=>{if(s.type==='Initial'||s.type==='Correction')base=Number(s.amount);else if(s.type==='Salary Increase')base+=Number(s.amount);});
+  return base;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');populateAllDropdowns();}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openNewEmpModal(){
+  document.getElementById('addEmpTitle').textContent='Add New Employee';
+  document.getElementById('editEmpId').value='';
+  document.getElementById('empID').value='(auto-generated)';
+  ['empFirstNameTH','empLastNameTH','empFirstNameEN','empLastNameEN','empNatID','empPhone','empSalary'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['empDOB','empStartDate','empProbEnd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('empRole').value='Salesman';
+  document.getElementById('empRegion').value='';
+  document.getElementById('empStatus').value='Active';
+  document.getElementById('empRouteWarn').style.display='none';
+  const sc=userScope();
+  if(sc&&sc.region){document.getElementById('empRegion').value=sc.region;populateDCDropdown('empDC',sc.region);}
+  if(sc&&sc.dc){setTimeout(()=>{document.getElementById('empDC').value=sc.dc;populateReportsList();},60);}
+  populateRouteDropdown('empRoute','');
+  populateReportsList();
+  openModal('addEmployeeModal');
+}
+
+// ── SAVE EMPLOYEE ─────────────────────────────────────────────
+function saveEmployee(){
+  const editId=document.getElementById('editEmpId').value;
+  const route=document.getElementById('empRoute').value;
+  const emp={
+    empID:editId||genEmpID(),
+    firstNameTH:document.getElementById('empFirstNameTH').value.trim(),
+    lastNameTH:document.getElementById('empLastNameTH').value.trim(),
+    firstNameEN:document.getElementById('empFirstNameEN').value.trim(),
+    lastNameEN:document.getElementById('empLastNameEN').value.trim(),
+    natID:document.getElementById('empNatID').value.trim(),
+    dob:document.getElementById('empDOB').value,
+    phone:document.getElementById('empPhone').value.trim(),
+    edu:document.getElementById('empEdu').value,
+    role:document.getElementById('empRole').value,
+    region:document.getElementById('empRegion').value,
+    dc:document.getElementById('empDC').value,
+    route,
+    reportsTo:document.getElementById('empReportsTo').value,
+    status:document.getElementById('empStatus').value,
+    salary:parseFloat(document.getElementById('empSalary').value)||0,
+    probEnd:document.getElementById('empProbEnd').value,
+    startDate:document.getElementById('empStartDate').value,
+    resignDate:'',resignReason:'',updatedAt:new Date().toISOString(),createdBy:currentUser?.username||'admin',
+  };
+  if(!emp.firstNameTH||!emp.startDate||!emp.dc){showToast('กรุณากรอกข้อมูลที่จำเป็น');return;}
+  // Route conflict: BLOCK with confirm
+  if(route&&isRouteTaken(route,editId)){
+    const o=getRouteOwner(route,editId);
+    if(!confirm(`Route ${route} ถูกใช้โดย ${o?o.firstNameTH+' '+o.lastNameTH:''} (Active) อยู่แล้ว\nยืนยันบันทึกต่อไป?`))return;
+  }
+  if(editId){
+    const idx=DB.employees.findIndex(e=>e.empID===editId);
+    if(idx>=0){const old=DB.employees[idx];emp.createdAt=old.createdAt;emp.resignDate=old.resignDate;emp.resignReason=old.resignReason;DB.employees[idx]=emp;DB.employees[idx].empID=editId;}
+    addHistory(editId,emp.firstNameTH+' '+emp.lastNameTH,'Update',emp.dc,'Updated record',currentUser?.username);
+  }else{
+    emp.createdAt=new Date().toISOString();DB.employees.push(emp);
+    addHistory(emp.empID,emp.firstNameTH+' '+emp.lastNameTH,'New Hire',emp.dc,emp.role,currentUser?.username);
+    if(emp.salary>0){DB.salary.push({empID:emp.empID,type:'Initial',amount:emp.salary,date:emp.startDate,remark:'Starting salary'});saveDB('salary');}
+    if(GAS_URL)gasCall({action:'addEmployee',data:JSON.stringify(emp)});
+  }
+  saveDB('employees');closeModal('addEmployeeModal');renderEmployeeTable();renderDashboard();
+  showToast(editId?'อัปเดตสำเร็จ':'เพิ่มพนักงานใหม่สำเร็จ');
+}
+function editEmployee(id){
+  const e=DB.employees.find(x=>x.empID===id);if(!e)return;
+  document.getElementById('addEmpTitle').textContent='Edit Employee';
+  document.getElementById('editEmpId').value=e.empID;
+  document.getElementById('empID').value=e.empID;
+  const flds={empFirstNameTH:e.firstNameTH,empLastNameTH:e.lastNameTH,empFirstNameEN:e.firstNameEN||'',empLastNameEN:e.lastNameEN||'',empNatID:e.natID||'',empDOB:e.dob||'',empPhone:e.phone||'',empStartDate:e.startDate,empProbEnd:e.probEnd||'',empSalary:e.salary||''};
+  Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});
+  document.getElementById('empEdu').value=e.edu||'ปริญญาตรี';
+  document.getElementById('empRole').value=e.role;
+  document.getElementById('empRegion').value=e.region;
+  populateDCDropdown('empDC',e.region);
+  document.getElementById('empStatus').value=e.status;
+  document.getElementById('empRouteWarn').style.display='none';
+  populateRouteDropdown('empRoute',e.empID);
+  populateReportsList();
+  setTimeout(()=>{document.getElementById('empDC').value=e.dc;document.getElementById('empRoute').value=e.route||'';document.getElementById('empReportsTo').value=e.reportsTo||'';},80);
+  openModal('addEmployeeModal');
+}
+function viewEmployee(id){
+  const e=DB.employees.find(x=>x.empID===id);if(!e)return;
+  document.getElementById('detailEmpName').textContent=e.firstNameTH+' '+e.lastNameTH;
+  document.getElementById('detailEmpID').textContent=e.empID+' · '+e.role+' · '+e.dc;
+  const hist=DB.history.filter(h=>h.empID===id);
+  const assets=DB.assets.filter(a=>a.empID===id);
+  const sals=DB.salary.filter(s=>s.empID===id);
+  const t=e.startDate?calcTenure(e.startDate,e.status==='Resigned'&&e.resignDate?e.resignDate:null):'-';
+  const reportsToName=e.reportsTo?DB.employees.find(x=>x.empID===e.reportsTo)?.firstNameTH+' '+DB.employees.find(x=>x.empID===e.reportsTo)?.lastNameTH:'-';
+  document.getElementById('empDetailBody').innerHTML=`
+    <div class="tab-bar"><button class="tab-btn active" onclick="switchDTab(this,'dti')">Info</button><button class="tab-btn" onclick="switchDTab(this,'dth')">History (${hist.length})</button><button class="tab-btn" onclick="switchDTab(this,'dta')">Assets (${assets.length})</button><button class="tab-btn" onclick="switchDTab(this,'dts')">Salary (${sals.length})</button></div>
+    <div id="dti"><div class="fgrid">
+      <div><div class="stat-lbl">Start Date</div><div style="font-weight:500">${e.startDate||'-'}</div></div>
+      <div><div class="stat-lbl">Tenure</div><div style="font-weight:500">${t}</div></div>
+      <div><div class="stat-lbl">Region</div><div style="font-weight:500">${e.region}</div></div>
+      <div><div class="stat-lbl">DC</div><div style="font-weight:500">${e.dc}</div></div>
+      <div><div class="stat-lbl">Route</div><div style="font-family:'DM Mono',monospace;font-weight:500">${e.route||'-'}</div></div>
+      <div><div class="stat-lbl">Status</div><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></div>
+      <div><div class="stat-lbl">Reports To</div><div style="font-size:12px">${reportsToName}</div></div>
+      <div><div class="stat-lbl">Phone</div><div>${e.phone||'-'}</div></div>
+      <div><div class="stat-lbl">Education</div><div>${e.edu||'-'}</div></div>
+      <div><div class="stat-lbl">National ID</div><div style="font-family:'DM Mono',monospace;font-size:11.5px">${e.natID||'-'}</div></div>
+      <div><div class="stat-lbl">Current Salary</div><div style="font-weight:600;color:#16a34a">฿${getCurrentSalary(id).toLocaleString()}</div></div>
+      <div><div class="stat-lbl">Created By</div><div style="color:var(--muted);font-size:12px">${e.createdBy||'-'}</div></div>
+    </div></div>
+    <div id="dth" style="display:none">${hist.length?[...hist].reverse().map(h=>`<div class="history-item"><div class="hdot" style="background:${h.type==='Resign'?'#dc2626':h.type==='Transfer'?'#2563eb':'#16a34a'}"></div><div><div style="font-size:12.5px;font-weight:500">${h.type}</div><div style="font-size:11.5px;color:var(--muted)">${h.date} · ${h.to||''}${h.route?' · Route:'+h.route:''}${h.remark?' · '+h.remark:''}</div></div></div>`).join(''):'<div style="color:var(--muted);font-size:12.5px;padding:16px 0">No history</div>'}</div>
+    <div id="dta" style="display:none">${assets.length?assets.map(a=>`<div class="asset-row"><div><div style="font-weight:500;font-size:12.5px">${a.type}${a.desc?' - '+a.desc:''}</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${a.serial||''}</div></div><div style="display:flex;gap:6px;align-items:center"><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span><span style="font-size:11.5px;color:var(--muted)">${a.date}</span></div></div>`).join(''):'<div style="color:var(--muted);font-size:12.5px;padding:16px 0">No assets</div>'}</div>
+    <div id="dts" style="display:none">${sals.length?[...sals].reverse().map(s=>`<div class="salary-card-inner"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:500;font-size:12.5px">${s.type}</div><div style="font-size:11.5px;color:var(--muted)">${s.date}${s.remark?' · '+s.remark:''}</div></div><div style="font-weight:600;font-size:14px">฿${Number(s.amount).toLocaleString()}</div></div></div>`).join(''):'<div style="color:var(--muted);font-size:12.5px;padding:16px 0">No salary records</div>'}</div>`;
+  openModal('empDetailModal');
+}
+function switchDTab(btn,tabId){
+  document.querySelectorAll('#empDetailBody .tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['dti','dth','dta','dts'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=id===tabId?'':'none';});
+}
+
+// ── TRANSFER & RESIGN ─────────────────────────────────────────
+function recordTransfer(){
+  const empId=document.getElementById('trEmp').value;
+  const toDC=document.getElementById('trToDC').value;
+  const newRoute=document.getElementById('trRoute').value;
+  const date=document.getElementById('trDate').value;
+  const remark=document.getElementById('trRemark').value;
+  if(!empId||!toDC||!date){showToast('กรุณาเลือกพนักงาน, DC และวันที่');return;}
+  const emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
+  if(newRoute&&isRouteTaken(newRoute,empId)){
+    const o=getRouteOwner(newRoute,empId);
+    if(!confirm(`Route ${newRoute} ถูกใช้โดย ${o?o.firstNameTH+' '+o.lastNameTH:''} อยู่แล้ว ยืนยัน?`))return;
+  }
+  const fromDC=emp.dc;const toDCObj=DB.dcs.find(d=>d.name===toDC);
+  addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Transfer',fromDC,toDC,currentUser?.username,remark,date,newRoute||emp.route);
+  emp.dc=toDC;emp.region=toDCObj?toDCObj.region:emp.region;
+  if(newRoute)emp.route=newRoute;
+  emp.status='Transferred';emp.updatedAt=new Date().toISOString();
+  saveDB('employees');if(GAS_URL)gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});
+  renderMovements();renderEmployeeTable();renderDashboard();
+  ['trEmp','trToDC','trDate','trRemark'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('trFromDC').value='';document.getElementById('trRoute').value='';
+  document.getElementById('trRouteWarn').style.display='none';
+  showToast('บันทึก Transfer สำเร็จ'+(newRoute?' · Route: '+newRoute:''));
+}
+function recordResign(){
+  const empId=document.getElementById('rsEmp').value;const date=document.getElementById('rsDate').value;
+  const reason=document.getElementById('rsReason').value;const remark=document.getElementById('rsRemark').value;
+  if(!empId||!date||!reason){showToast('กรุณากรอกข้อมูลให้ครบ');return;}
+  const emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
+  addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Resign',emp.dc,reason,currentUser?.username,remark,date,'');
+  emp.status='Resigned';emp.resignDate=date;emp.resignReason=reason;emp.updatedAt=new Date().toISOString();
+  saveDB('employees');if(GAS_URL)gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});
+  renderMovements();renderEmployeeTable();renderDashboard();
+  ['rsEmp','rsDate','rsReason','rsLWD','rsRemark'].forEach(id=>{document.getElementById(id).value='';});
+  showToast('บันทึก Resign สำเร็จ');
+}
+function addHistory(empID,name,type,from,to,by,remark,date,route){
+  DB.history.push({date:date||new Date().toISOString().split('T')[0],empID,name,type,from:from||'',to:to||'',route:route||'',remark:remark||'',by:by||'system'});
+  saveDB('history');
+}
+function renderMovements(){
+  const search=(document.getElementById('movSearch')?.value||'').toLowerCase();
+  const type=document.getElementById('movType')?.value||'';
+  const sc=userScope();
+  let data=[...DB.history].reverse();
+  if(search)data=data.filter(h=>(h.name+' '+h.empID).toLowerCase().includes(search));
+  if(type)data=data.filter(h=>h.type===type);
+  if(sc){data=data.filter(h=>{const emp=DB.employees.find(e=>e.empID===h.empID);if(!emp)return false;if(sc.role==='ASM')return emp.dc===sc.dc;if(sc.role==='RSM')return emp.region===sc.region;return true;});}
+  const tbody=document.getElementById('movementTable');
+  tbody.innerHTML=data.slice(0,100).map(h=>`<tr><td>${h.date}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${h.empID}</td><td>${h.name}</td><td><span class="badge ${h.type==='Resign'?'badge-resigned':h.type==='Transfer'?'badge-transferred':'badge-active'}">${h.type}</span></td><td style="font-size:12px">${h.from||'-'}</td><td style="font-size:12px">${h.to||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${h.route||'-'}</td><td style="color:var(--muted);font-size:12px">${h.remark||'-'}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No records</td></tr>';
+}
+
+// ── ASSETS ────────────────────────────────────────────────────
+function saveAsset(){
+  const asset={assetID:'AST-'+Date.now(),empID:document.getElementById('assetEmp').value,type:document.getElementById('assetType').value,desc:document.getElementById('assetDesc').value,serial:document.getElementById('assetSerial').value,date:document.getElementById('assetDate').value||new Date().toISOString().split('T')[0],status:'In Use'};
+  if(!asset.empID){showToast('กรุณาเลือกพนักงาน');return;}
+  DB.assets.push(asset);saveDB('assets');if(GAS_URL)gasCall({action:'addAsset',data:JSON.stringify(asset)});
+  closeModal('addAssetModal');renderAssetTable();showToast('บันทึก Asset สำเร็จ');
+}
+function filterAssets(){renderAssetTable();}
+function renderAssetTable(){
+  const search=(document.getElementById('assetSearch')?.value||'').toLowerCase();
+  const fType=document.getElementById('fAssetType')?.value||'';
+  const fStat=document.getElementById('fAssetStatus')?.value||'';
+  const sc=userScope();
+  let data=DB.assets;
+  if(fType)data=data.filter(a=>a.type===fType);
+  if(fStat)data=data.filter(a=>a.status===fStat);
+  const rows=data.map(a=>{
+    const emp=DB.employees.find(e=>e.empID===a.empID);
+    if(sc){if(sc.role==='ASM'&&emp?.dc!==sc.dc)return'';if(sc.role==='RSM'&&emp?.region!==sc.region)return'';}
+    if(search&&!(((emp?emp.firstNameTH+' '+emp.lastNameTH:'')+' '+a.empID).toLowerCase().includes(search)))return'';
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${emp?emp.firstNameTH+' '+emp.lastNameTH:a.empID}</td><td style="font-size:12px">${emp?.dc||'-'}</td><td>${a.type}</td><td>${a.desc||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td><td><button class="btn btn-secondary btn-sm" onclick="returnAsset('${a.assetID}')">Return</button></td></tr>`;
+  }).filter(Boolean).join('');
+  document.getElementById('assetTable').innerHTML=rows||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No assets</td></tr>';
+}
+function returnAsset(id){const a=DB.assets.find(x=>x.assetID===id);if(a){a.status='Returned';saveDB('assets');renderAssetTable();showToast('คืน Asset แล้ว');}}
+
+// ── SALARY ────────────────────────────────────────────────────
+function showCurrentSalary(){
+  const empId=document.getElementById('salEmp').value;const infoEl=document.getElementById('currentSalaryInfo');
+  if(!empId){infoEl.textContent='Select employee';document.getElementById('salaryPreview').style.display='none';return;}
+  const cur=getCurrentSalary(empId);const emp=DB.employees.find(e=>e.empID===empId);
+  infoEl.innerHTML=`<strong>เงินเดือนปัจจุบัน: ฿${cur.toLocaleString()}</strong> · ${emp?.role||''} · ${emp?.dc||''}`;
+  previewNewSalary();
+}
+function updateSalaryHelp(){
+  const type=document.getElementById('salType').value;const el=document.getElementById('salaryHelp');
+  const msgs={'Salary Increase':'ใส่จำนวนที่เพิ่ม → บวกเข้าเงินเดือนปัจจุบัน','Bonus':'จ่ายครั้งเดียว ไม่กระทบเงินเดือนปัจจุบัน','Correction':'ตั้งเงินเดือนใหม่ทั้งหมด (override)'};
+  el.textContent=msgs[type]||'';previewNewSalary();
+}
+function previewNewSalary(){
+  const empId=document.getElementById('salEmp').value;const type=document.getElementById('salType').value;
+  const amount=parseFloat(document.getElementById('salAmount').value)||0;const preEl=document.getElementById('salaryPreview');
+  if(!empId||!amount){preEl.style.display='none';return;}
+  const cur=getCurrentSalary(empId);let msg='';
+  if(type==='Salary Increase')msg=`New: ฿${(cur+amount).toLocaleString()} (฿${cur.toLocaleString()} + ฿${amount.toLocaleString()})`;
+  else if(type==='Bonus')msg=`Bonus ฿${amount.toLocaleString()} · เงินเดือนคงเดิม ฿${cur.toLocaleString()}`;
+  else msg=`Reset to ฿${amount.toLocaleString()} (เดิม ฿${cur.toLocaleString()})`;
+  preEl.textContent=msg;preEl.style.display='block';
+}
+function saveSalary(){
+  const empId=document.getElementById('salEmp').value;const type=document.getElementById('salType').value;
+  const amount=parseFloat(document.getElementById('salAmount').value)||0;
+  if(!empId||!amount){showToast('กรุณากรอกข้อมูล');return;}
+  const emp=DB.employees.find(e=>e.empID===empId);const cur=getCurrentSalary(empId);
+  const rec={empID:empId,type,amount,date:document.getElementById('salDate').value||new Date().toISOString().split('T')[0],remark:document.getElementById('salRemark').value,prevSalary:cur};
+  DB.salary.push(rec);
+  if(type==='Salary Increase')emp.salary=cur+amount;else if(type==='Correction')emp.salary=amount;
+  saveDB('salary');saveDB('employees');if(GAS_URL)gasCall({action:'addSalary',data:JSON.stringify(rec)});
+  closeModal('addSalaryModal');renderSalaryTable();showToast('บันทึกสำเร็จ');
+}
+function renderSalaryTable(){
+  const search=(document.getElementById('salSearch')?.value||'').toLowerCase();
+  const fReg=document.getElementById('fSalRegion')?.value||'';
+  const fDC=document.getElementById('fSalDC')?.value||'';
+  const fRole=document.getElementById('fSalRole')?.value||'';
+  let data=applyScope(DB.employees).filter(e=>e.status!=='Resigned');
+  if(fReg)data=data.filter(e=>e.region===fReg);
+  if(fDC)data=data.filter(e=>e.dc===fDC);
+  if(fRole)data=data.filter(e=>e.role===fRole);
+  if(search)data=data.filter(e=>(e.firstNameTH+' '+e.lastNameTH+' '+e.empID).toLowerCase().includes(search));
+  const tbody=document.getElementById('salaryTable');
+  tbody.innerHTML=data.length?data.map(e=>{
+    const sals=DB.salary.filter(s=>s.empID===e.empID);
+    const bonuses=sals.filter(s=>s.type==='Bonus');const incs=sals.filter(s=>s.type==='Salary Increase');
+    const lastInc=incs[incs.length-1];const tb=bonuses.reduce((sum,s)=>sum+Number(s.amount),0);
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td style="font-weight:500">${e.firstNameTH} ${e.lastNameTH}</td><td>${e.role}</td><td style="font-size:12px">${e.dc}</td><td style="font-weight:600">฿${getCurrentSalary(e.empID).toLocaleString()}</td><td>${tb?'฿'+tb.toLocaleString():'-'}</td><td>${lastInc?'฿'+Number(lastInc.amount).toLocaleString():'-'}</td><td style="font-size:12px;color:var(--muted)">${lastInc?.date||'-'}</td><td><button class="btn btn-secondary btn-sm" onclick="viewEmployee('${e.empID}');setTimeout(()=>document.querySelectorAll('#empDetailBody .tab-btn')[3]?.click(),120)">History</button></td></tr>`;
+  }).join(''):'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No data</td></tr>';
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────
+function switchSTab(btn,panelId){
+  document.querySelectorAll('.stab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.stab-panel').forEach(p=>p.classList.remove('active'));document.getElementById(panelId).classList.add('active');
+}
+function renderSettings(){
+  const rl=document.getElementById('reasonList');
+  if(rl)rl.innerHTML=DB.reasons.map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0ede8"><span style="font-size:12.5px">${r}</span><button class="btn btn-danger btn-sm" onclick="removeReason(${i})">×</button></div>`).join('');
+  const dl=document.getElementById('dcList');
+  if(dl)dl.innerHTML=DB.dcs.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><span style="font-size:11.5px"><strong>${d.name}</strong> <span style="color:var(--muted)">${d.label} · ${d.region}</span></span><button class="btn btn-danger btn-sm" onclick="removeDC(${i})">×</button></div>`).join('');
+  const activeRoutes=getActiveRoutes('');const conflicts=DB.routes.filter(r=>activeRoutes.includes(r));
+  const cb=document.getElementById('routeConflictBadge');if(cb)cb.style.display=conflicts.length?'inline-flex':'none';
+  const rlt=document.getElementById('routeList');
+  if(rlt)rlt.innerHTML=DB.routes.map((r,i)=>{
+    const isTaken=activeRoutes.includes(r);
+    const owner=isTaken?DB.employees.find(e=>e.route===r&&e.status==='Active'):null;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${r}</span>${isTaken?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${owner?owner.firstNameTH:''}</span>`:''}</div><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div>`;
+  }).join('');
+  const gasEl=document.getElementById('gasURL');if(gasEl)gasEl.value=GAS_URL;
+}
+function addReason(){const v=document.getElementById('newReason').value.trim();if(!v)return;DB.reasons.push(v);saveDB('reasons');document.getElementById('newReason').value='';renderSettings();showToast('เพิ่มเหตุผลแล้ว');}
+function removeReason(i){DB.reasons.splice(i,1);saveDB('reasons');renderSettings();}
+function addDC(){const n=document.getElementById('newDCName').value.trim();const r=document.getElementById('newDCRegion').value;if(!n)return;DB.dcs.push({name:'DC-'+n.toUpperCase(),region:r,label:n});saveDB('dcs');document.getElementById('newDCName').value='';renderSettings();populateDCFilter();showToast('เพิ่ม DC แล้ว');}
+function removeDC(i){DB.dcs.splice(i,1);saveDB('dcs');renderSettings();}
+function addRoute(){const v=document.getElementById('newRoute').value.trim().toUpperCase();if(!v)return;if(DB.routes.includes(v)){showToast('Route นี้มีอยู่แล้ว');return;}DB.routes.push(v);saveDB('routes');document.getElementById('newRoute').value='';renderSettings();showToast('เพิ่ม Route แล้ว');}
+function removeRoute(i){DB.routes.splice(i,1);saveDB('routes');renderSettings();}
+async function saveGASUrl(){
+  GAS_URL=document.getElementById('gasURL').value.trim();localStorage.setItem(GAS_KEY,GAS_URL);
+  const el=document.getElementById('gasStatus');if(!GAS_URL){el.textContent='URL removed.';return;}
+  el.textContent='Testing...';el.style.color='var(--muted)';
+  const r=await gasCall({action:'getEmployees'});
+  if(r&&r.rows){el.textContent='✓ Connected! '+r.rows.length+' employees in Sheet.';el.style.color='var(--green)';if(r.rows.length>0){DB.employees=r.rows;saveDB('employees');renderEmployeeTable();}}
+  else{el.textContent='✗ Connection failed.';el.style.color='var(--red)';}
+}
+
+// ── CSV TEMPLATES — all 5 sections ───────────────────────────
+const TMPL={
+  employees:{h:['empID','firstNameTH','lastNameTH','firstNameEN','lastNameEN','natID','dob','phone','edu','role','region','dc','route','status','salary','startDate','probEnd','reportsTo'],s:['','สมชาย','มานะดี','Somchai','Manadee','1234567890123','1990-01-15','0812345678','ปริญญาตรี','Salesman','NOR','DC-NOR-01','R-A1','Active','18000','2024-01-01','','']},
+  assets:{h:['empID','type','serial','desc','date'],s:['EMP-2026-0001','HHT Device','HHT-001','HHT for Route A1','2024-01-01']},
+  salary:{h:['empID','type','amount','date','remark'],s:['EMP-2026-0001','Salary Increase','2000','2024-07-01','Annual review']},
+  history:{h:['empID','type','from','to','route','date','remark'],s:['EMP-2026-0001','Transfer','DC-NOR-01','DC-NOE-01','R-B1','2024-06-01','Expansion']},
+  dc_routes:{h:['dataType','name','region','label'],s:['DC','DC-NOR-04','NOR','พะเยา'],s2:['Route','R-F1','','']},
+};
+function dlTemplate(key){
+  const t=TMPL[key];if(!t)return;
+  const rows=[t.h.join(','),t.s.map(v=>`"${v}"`).join(',')];
+  if(t.s2)rows.push(t.s2.map(v=>`"${v}"`).join(','));
+  const blob=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hr_template_'+key+'.csv';a.click();
+  showToast('ดาวน์โหลด template: '+key);
+}
+
+// ── IMPORT CSV — auto-detect by headers ───────────────────────
+function importCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const lines=ev.target.result.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+    if(lines.length<2){showToast('CSV ต้องมี header + data');return;}
+    const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    const isAsset=headers.includes('serial')&&headers.includes('type')&&!headers.includes('firstNameTH');
+    const isSalary=headers.includes('amount')&&headers.includes('empID')&&!headers.includes('firstNameTH');
+    const isHistory=headers.includes('from')&&headers.includes('to')&&!headers.includes('firstNameTH');
+    const isEmployee=headers.includes('firstNameTH');
+    let count=0,skip=0,warnRoutes=[];
+    for(let i=1;i<lines.length;i++){
+      const vals=lines[i].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      if(vals.length<2||vals.every(v=>!v)){skip++;continue;}
+      const row={};headers.forEach((h,j)=>row[h]=vals[j]||'');
+      if(isAsset){
+        if(!row.empID){skip++;continue;}
+        DB.assets.push({assetID:'AST-'+Date.now()+i,empID:row.empID,type:row.type||'Other',desc:row.desc||'',serial:row.serial||'',date:row.date||new Date().toISOString().split('T')[0],status:'In Use'});count++;
+      }else if(isSalary){
+        if(!row.empID||!row.amount){skip++;continue;}
+        DB.salary.push({empID:row.empID,type:row.type||'Initial',amount:parseFloat(row.amount)||0,date:row.date||'',remark:row.remark||''});count++;
+      }else if(isHistory){
+        if(!row.empID){skip++;continue;}
+        DB.history.push({date:row.date||'',empID:row.empID,name:'',type:row.type||'Transfer',from:row.from||'',to:row.to||'',route:row.route||'',remark:row.remark||'',by:'import'});count++;
+      }else if(isEmployee){
+        if(DB.employees.find(x=>x.empID===row.empID&&row.empID)){skip++;continue;}
+        const emp={empID:row.empID||genEmpID(),firstNameTH:row.firstNameTH||'',lastNameTH:row.lastNameTH||'',firstNameEN:row.firstNameEN||'',lastNameEN:row.lastNameEN||'',natID:row.natID||'',dob:row.dob||'',phone:row.phone||'',edu:row.edu||'ปริญญาตรี',role:row.role||'Salesman',region:row.region||'',dc:row.dc||'',route:row.route||'',reportsTo:row.reportsTo||'',status:row.status||'Active',salary:parseFloat(row.salary)||0,probEnd:row.probEnd||'',startDate:row.startDate||new Date().toISOString().split('T')[0],resignDate:'',resignReason:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:'import'};
+        if(!emp.firstNameTH){skip++;continue;}
+        if(emp.route&&isRouteTaken(emp.route,emp.empID))warnRoutes.push(emp.route);
+        DB.employees.push(emp);
+        if(emp.salary>0)DB.salary.push({empID:emp.empID,type:'Initial',amount:emp.salary,date:emp.startDate,remark:'Imported'});
+        count++;
+      }else{skip++;continue;}
+    }
+    if(isAsset)saveDB('assets');else if(isSalary)saveDB('salary');else if(isHistory)saveDB('history');else{saveDB('employees');saveDB('salary');}
+    renderEmployeeTable();renderDashboard();renderAssetTable();renderSalaryTable();
+    let msg=`Import สำเร็จ ${count} รายการ${skip?' (ข้าม '+skip+')':''}`;
+    if(warnRoutes.length)msg+=` ⚠ Route ซ้ำ: ${[...new Set(warnRoutes)].join(', ')}`;
+    showToast(msg);e.target.value='';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+// ── USERS ─────────────────────────────────────────────────────
+function renderUsers(){
+  const tbody=document.getElementById('userTable');if(!tbody)return;
+  tbody.innerHTML=USERS.map((u,i)=>`<tr><td style="font-family:'DM Mono',monospace;font-size:12px">${u.username}</td><td style="font-weight:500">${u.name}</td><td><span class="ptag">${u.role}</span></td><td>${u.region||'All'}</td><td>${u.dc||'-'}</td><td><span class="badge ${u.role==='Admin'?'badge-active':u.role==='RSM'?'badge-transferred':'badge-probation'}">${u.role==='Admin'?'Full':u.role==='RSM'?'Regional':'DC Only'}</span></td><td><div style="display:flex;gap:4px"><button class="btn btn-secondary btn-sm" onclick="editUser(${i})">Edit</button>${i>=3?`<button class="btn btn-danger btn-sm" onclick="removeUser(${i})">Remove</button>`:''}</div></td></tr>`).join('');
+}
+function editUser(i){
+  const u=USERS[i];document.getElementById('userModalTitle').textContent='Edit User';document.getElementById('editUserIdx').value=i;
+  document.getElementById('newUsername').value=u.username;document.getElementById('newPassword').value=u.password;
+  document.getElementById('newUserName').value=u.name;document.getElementById('newUserRole').value=u.role;document.getElementById('newUserRegion').value=u.region||'';
+  openModal('addUserModal');setTimeout(()=>{document.getElementById('newUserDC').value=u.dc||'';},80);
+}
+function saveUser(){
+  const idx=document.getElementById('editUserIdx').value;
+  const u={username:document.getElementById('newUsername').value.trim(),password:document.getElementById('newPassword').value,name:document.getElementById('newUserName').value.trim(),role:document.getElementById('newUserRole').value,region:document.getElementById('newUserRegion').value,dc:document.getElementById('newUserDC').value};
+  if(!u.username||!u.password||!u.name){showToast('กรุณากรอกข้อมูล');return;}
+  if(idx!=='')USERS[parseInt(idx)]=u;else USERS.push(u);
+  DB.users=USERS;saveDB('users');closeModal('addUserModal');
+  document.getElementById('editUserIdx').value='';document.getElementById('userModalTitle').textContent='Add System User';
+  renderUsers();showToast(idx!==''?'แก้ไข User สำเร็จ':'เพิ่ม User สำเร็จ');
+}
+function removeUser(i){if(i<3)return;if(!confirm('Remove user?'))return;USERS.splice(i,1);DB.users=USERS;saveDB('users');renderUsers();}
+
+// ── REPORT FILTER HELPERS ─────────────────────────────────────
+function onReportRegionChange(){
+  const region=document.getElementById('rRegion').value;
+  const rDC=document.getElementById('rDC');
+  rDC.innerHTML='<option value="">All DC</option>';
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{rDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  reRunReport();
+}
+function clearReportFilters(){
+  ['rPeriod','rRegion','rDC'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const rDC=document.getElementById('rDC');rDC.innerHTML='<option value="">All DC</option>';DB.dcs.forEach(d=>{rDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  reRunReport();
+}
+function initReportDCDropdown(){
+  const el=document.getElementById('rDC');if(!el)return;
+  const sc=userScope();
+  const region=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:'';
+  el.innerHTML='<option value="">All DC</option>';
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{el.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+}
+function reRunReport(){if(currentReport)runReport(currentReport);}
+function getReportData(){
+  const sc=userScope();
+  const period=document.getElementById('rPeriod')?.value||'';
+  const filterRegion=document.getElementById('rRegion')?.value||'';
+  const filterDC=document.getElementById('rDC')?.value||'';
+
+  // Lock filters per role:
+  // Admin → free; RSM → Region locked, DC free; ASM → both locked
+  const rRegEl=document.getElementById('rRegion');const rDCEl=document.getElementById('rDC');
+  if(sc){
+    if(sc.role==='RSM'){
+      if(rRegEl){rRegEl.value=sc.region;rRegEl.disabled=true;}
+      if(rDCEl){rDCEl.disabled=false;rDCEl.style.display='';}
+    }else if(sc.role==='ASM'){
+      if(rRegEl){rRegEl.value=sc.region;rRegEl.disabled=true;}
+      if(rDCEl){rDCEl.value=sc.dc;rDCEl.disabled=true;rDCEl.style.display='';}
+    }
+  }else{
+    if(rRegEl)rRegEl.disabled=false;
+    if(rDCEl){rDCEl.disabled=false;rDCEl.style.display='';}
+  }
+
+  let data=applyScope(DB.employees);
+  const effRegion=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:filterRegion;
+  const effDC=sc&&sc.role==='ASM'?sc.dc:filterDC;
+  if(effRegion)data=data.filter(e=>e.region===effRegion);
+  if(effDC)data=data.filter(e=>e.dc===effDC);
+  return{data,period,effRegion,effDC,sc};
+}
+
+// ── REPORTS ───────────────────────────────────────────────────
+let currentReport=null;
+function runReport(type){
+  currentReport=type;
+  initReportDCDropdown();
+  document.getElementById('reportResult').style.display='block';
+  const titles={headcount:'Headcount',turnover:'Turnover',tenure:'Tenure',salary:'Salary',assets:'Assets',movement:'Movement'};
+  document.getElementById('reportTitle').textContent=titles[type]+' Report';
+  const thead=document.getElementById('reportThead');const tbody=document.getElementById('reportTbody');
+  const {data,period,effRegion,effDC,sc}=getReportData();
+
+  if(type==='headcount'){
+    // Headcount: scoped to user permission + extra region/DC filter
+    // Show only DCs the user has access to
+    const visibleDCs=DB.dcs.filter(dc=>{
+      if(effDC)return dc.name===effDC;
+      if(effRegion)return dc.region===effRegion;
+      return true;
+    });
+    thead.innerHTML='<tr><th>Region</th><th>DC</th><th>Active</th><th>Probation</th><th>Salesman/HHT</th><th>ASM</th><th>RSM</th><th>Other</th><th>Total</th></tr>';
+    const rows=visibleDCs.map(dc=>{
+      const e=data.filter(x=>x.dc===dc.name);
+      const activeE=e.filter(x=>x.status==='Active');
+      const probE=e.filter(x=>x.status==='Probation');
+      const sm=e.filter(x=>['Salesman','HHT'].includes(x.role)).length;
+      const asm=e.filter(x=>x.role==='ASM').length;const rsm=e.filter(x=>x.role==='RSM').length;
+      return`<tr><td>${dc.region}</td><td style="font-weight:500">${dc.name}</td><td style="color:#16a34a;font-weight:500">${activeE.length}</td><td style="color:#ca8a04">${probE.length}</td><td>${sm}</td><td>${asm}</td><td>${rsm}</td><td>${e.length-sm-asm-rsm}</td><td style="font-weight:600">${e.length}</td></tr>`;
+    });
+    // Summary row
+    const tot=data.length;const totActive=data.filter(x=>x.status==='Active').length;const totProb=data.filter(x=>x.status==='Probation').length;
+    const totSm=data.filter(x=>['Salesman','HHT'].includes(x.role)).length;const totAsm=data.filter(x=>x.role==='ASM').length;const totRsm=data.filter(x=>x.role==='RSM').length;
+    rows.push(`<tr style="background:#faf9f7;font-weight:600;border-top:2px solid var(--border)"><td>—</td><td>Total</td><td style="color:#16a34a">${totActive}</td><td style="color:#ca8a04">${totProb}</td><td>${totSm}</td><td>${totAsm}</td><td>${totRsm}</td><td>${tot-totSm-totAsm-totRsm}</td><td>${tot}</td></tr>`);
+    tbody.innerHTML=rows.join('');
+  }
+  else if(type==='turnover'){
+    let res=data.filter(e=>e.status==='Resigned');
+    if(period){const r=getPeriodRange(period);if(r)res=res.filter(e=>e.resignDate&&new Date(e.resignDate)>=r.start&&new Date(e.resignDate)<=r.end);}
+    thead.innerHTML='<tr><th>Reason</th><th>Count</th><th>%</th></tr>';
+    const rm={};res.forEach(e=>{rm[e.resignReason||'Unknown']=(rm[e.resignReason||'Unknown']||0)+1;});
+    tbody.innerHTML=Object.entries(rm).sort((a,b)=>b[1]-a[1]).map(([r,c])=>`<tr><td>${r}</td><td>${c}</td><td>${res.length?Math.round(c/res.length*100):0}%</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+  }
+  else if(type==='tenure'){
+    let d=data;
+    if(period){const r=getPeriodRange(period);if(r)d=d.filter(e=>e.startDate&&new Date(e.startDate)>=r.start&&new Date(e.startDate)<=r.end);}
+    thead.innerHTML='<tr><th>EMP ID</th><th>Name</th><th>DC</th><th>Region</th><th>Start</th><th>Tenure</th><th>Status</th></tr>';
+    tbody.innerHTML=[...d].sort((a,b)=>new Date(a.startDate)-new Date(b.startDate)).map(e=>`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td>${e.firstNameTH} ${e.lastNameTH}</td><td>${e.dc}</td><td>${e.region}</td><td>${e.startDate}</td><td>${e.startDate?calcTenure(e.startDate,e.status==='Resigned'&&e.resignDate?e.resignDate:null):'-'}</td><td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+  }
+  else if(type==='salary'){
+    thead.innerHTML='<tr><th>EMP ID</th><th>Name</th><th>Role</th><th>DC</th><th>Region</th><th>Current Salary</th><th>Total Bonus</th></tr>';
+    tbody.innerHTML=data.filter(e=>e.status!=='Resigned').map(e=>{const tb=DB.salary.filter(s=>s.empID===e.empID&&s.type==='Bonus').reduce((sum,s)=>sum+Number(s.amount),0);return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td>${e.firstNameTH} ${e.lastNameTH}</td><td>${e.role}</td><td>${e.dc}</td><td>${e.region}</td><td style="font-weight:500">฿${getCurrentSalary(e.empID).toLocaleString()}</td><td>${tb?'฿'+tb.toLocaleString():'-'}</td></tr>`;}).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+  }
+  else if(type==='assets'){
+    thead.innerHTML='<tr><th>Asset ID</th><th>Employee</th><th>DC</th><th>Region</th><th>Type</th><th>Serial</th><th>Date</th><th>Status</th></tr>';
+    tbody.innerHTML=DB.assets.map(a=>{
+      const emp=DB.employees.find(e=>e.empID===a.empID);if(!emp)return'';
+      if(sc&&sc.role==='ASM'&&emp.dc!==sc.dc)return'';
+      if(sc&&sc.role==='RSM'&&emp.region!==sc.region)return'';
+      if(effDC&&emp.dc!==effDC)return'';
+      if(effRegion&&emp.region!==effRegion)return'';
+      if(period){const r=getPeriodRange(period);if(r&&a.date&&!(new Date(a.date)>=r.start&&new Date(a.date)<=r.end))return'';}
+      return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${emp.firstNameTH+' '+emp.lastNameTH}</td><td>${emp.dc}</td><td>${emp.region}</td><td>${a.type}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td></tr>`;
+    }).filter(Boolean).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+  }
+  else if(type==='movement'){
+    thead.innerHTML='<tr><th>Date</th><th>EMP ID</th><th>Name</th><th>Type</th><th>From</th><th>To</th><th>Route</th><th>DC</th><th>Region</th></tr>';
+    let h=[...DB.history].reverse();
+    if(sc)h=h.filter(x=>{const emp=DB.employees.find(e=>e.empID===x.empID);if(!emp)return false;if(sc.role==='ASM')return emp.dc===sc.dc;if(sc.role==='RSM')return emp.region===sc.region;return true;});
+    if(effDC)h=h.filter(x=>DB.employees.find(e=>e.empID===x.empID)?.dc===effDC);
+    else if(effRegion)h=h.filter(x=>DB.employees.find(e=>e.empID===x.empID)?.region===effRegion);
+    if(period){const r=getPeriodRange(period);if(r)h=h.filter(x=>x.date&&new Date(x.date)>=r.start&&new Date(x.date)<=r.end);}
+    tbody.innerHTML=h.map(h=>{
+      const emp=DB.employees.find(e=>e.empID===h.empID);
+      return`<tr><td>${h.date}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${h.empID}</td><td>${h.name}</td><td><span class="badge ${h.type==='Resign'?'badge-resigned':h.type==='Transfer'?'badge-transferred':'badge-active'}">${h.type}</span></td><td>${h.from||'-'}</td><td>${h.to||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${h.route||'-'}</td><td style="font-size:12px">${emp?.dc||'-'}</td><td>${emp?.region||'-'}</td></tr>`;
+    }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+  }
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function csvBlob(rows,headers,filename){const lines=[headers.join(','),...rows.map(r=>headers.map(h=>`"${(r[h]||'').toString().replace(/"/g,'""')}"`).join(','))];const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();}
+function exportEmployeesCSV(){csvBlob(getFilteredEmployees(),['empID','firstNameTH','lastNameTH','role','dc','region','route','status','startDate','salary'],'employees.csv');showToast('Export CSV');}
+function exportDashboardCSV(){const s=DB.dcs.map(dc=>{const e=DB.employees.filter(x=>x.dc===dc.name);return{dc:dc.name,region:dc.region,total:e.length,active:e.filter(x=>x.status==='Active').length,resigned:e.filter(x=>x.status==='Resigned').length};});csvBlob(s,['dc','region','total','active','resigned'],'dashboard.csv');showToast('Export CSV');}
+function exportReportCSV(){const h=[];document.querySelectorAll('#reportThead th').forEach(th=>h.push(th.textContent));const rows=[];document.querySelectorAll('#reportTbody tr').forEach(tr=>{const r={};tr.querySelectorAll('td').forEach((td,i)=>{r[h[i]]=(td.textContent||'').trim();});rows.push(r);});csvBlob(rows,h,'report-'+currentReport+'.csv');showToast('Export CSV');}
+function exportDashboardPDF(){const{jsPDF}=window.jspdf;const doc=new jsPDF();doc.setFontSize(16);doc.text('HR Dashboard Report',14,16);doc.setFontSize(10);const all=applyScope(DB.employees);doc.text('Total: '+all.length+' | Active: '+all.filter(e=>e.status==='Active').length,14,26);let y=38;doc.setFontSize(12);doc.text('Headcount by DC',14,y);y+=8;doc.setFontSize(9);DB.dcs.forEach(dc=>{const c=all.filter(e=>e.dc===dc.name).length;doc.text(dc.name+' ('+dc.region+'): '+c,14,y);y+=6;if(y>270){doc.addPage();y=20;}});doc.save('hr-dashboard.pdf');showToast('Export PDF');}
+function exportReportPDF(){const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape'});doc.setFontSize(14);doc.text(document.getElementById('reportTitle').textContent,14,14);const h=[];document.querySelectorAll('#reportThead th').forEach(th=>h.push(th.textContent));const rows=[];document.querySelectorAll('#reportTbody tr').forEach(tr=>{const r=[];tr.querySelectorAll('td').forEach(td=>r.push(td.textContent.trim()));rows.push(r);});let y=26;doc.setFontSize(8);const cw=Math.min(38,260/Math.max(h.length,1));doc.setFont('helvetica','bold');h.forEach((hd,i)=>doc.text(hd.substring(0,14),14+i*cw,y));y+=6;doc.setFont('helvetica','normal');rows.forEach(r=>{r.forEach((c,i)=>doc.text((c||'').substring(0,16),14+i*cw,y));y+=6;if(y>190){doc.addPage();y=20;}});doc.save('report-'+currentReport+'.pdf');showToast('Export PDF');}
+
+// ── GLOBAL SEARCH & UTILS ─────────────────────────────────────
+function globalSearchFn(){const q=document.getElementById('globalSearch').value.toLowerCase();if(!q)return;nav('employees');document.getElementById('empSearch').value=q;filterEmployees();}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>{t.style.opacity='0';},3000);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+</script>
+</body>
+</html>
