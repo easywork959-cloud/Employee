@@ -487,7 +487,7 @@ let DB={
   users:JSON.parse(localStorage.getItem('hr_users')||'[]'),
   reasons:JSON.parse(localStorage.getItem('hr_reasons')||'["ลาออกเอง","สัญญาหมดอายุ","ปฏิบัติงานไม่ผ่าน","ย้ายที่อยู่","สุขภาพ","ค่าตอบแทนต่ำ","หางานใหม่","อื่นๆ"]'),
   dcs:JSON.parse(localStorage.getItem('hr_dcs')||'[]'),
-  routes:JSON.parse(localStorage.getItem('hr_routes')||'[]'),
+  routes:JSON.parse(localStorage.getItem('hr_routes')||'[]').map(r=>typeof r==='string'?{route:r,dc:''}:(r&&r.route?r:{route:String(r),dc:''})),
 };
 let currentUser=null;
 let USERS=DB.users.length?DB.users:[
@@ -578,7 +578,13 @@ function getActiveRoutes(excludeId){
 }
 function getRouteCode(r){return typeof r==='object'?(r.route||r):String(r);}
 function getRouteDC(r){return typeof r==='object'?(r.dc||''):''}
-function normalizeRoutes(){DB.routes=DB.routes.map(r=>typeof r==='string'||typeof r!=='object'?{route:String(r),dc:''}:r);}
+function normalizeRoutes(){
+  DB.routes=DB.routes.map(r=>{
+    if(typeof r==='string')return{route:r,dc:''};
+    if(r&&typeof r==='object'&&r.route)return{route:String(r.route),dc:String(r.dc||'')};
+    return{route:String(r),dc:''};
+  });
+}
 function isRouteTaken(route,excludeId){
   return route?getActiveRoutes(excludeId).includes(route):false;
 }
@@ -637,7 +643,7 @@ function initApp(){
   if(!DB.dcs.length){
     DB.dcs=[{name:'DC-NOR-01',region:'NOR',label:'เชียงใหม่'},{name:'DC-NOR-02',region:'NOR',label:'เชียงราย'},{name:'DC-NOR-03',region:'NOR',label:'ลำปาง'},{name:'DC-NOE-01',region:'NOE',label:'ขอนแก่น'},{name:'DC-NOE-02',region:'NOE',label:'อุดรธานี'},{name:'DC-NOE-03',region:'NOE',label:'นครราชสีมา'},{name:'DC-BKKCT-01',region:'BKKCT',label:'กรุงเทพ N'},{name:'DC-BKKCT-02',region:'BKKCT',label:'กรุงเทพ S'},{name:'DC-BKKCT-03',region:'BKKCT',label:'นนทบุรี'},{name:'DC-SOU-01',region:'SOU',label:'สุราษฎร์ธานี'},{name:'DC-SOU-02',region:'SOU',label:'ภูเก็ต'},{name:'DC-SOU-03',region:'SOU',label:'หาดใหญ่'}];saveDB('dcs');
   }
-  if(!DB.routes.length){DB.routes=[{route:'R-A1',dc:''},{route:'R-A2',dc:''},{route:'R-B1',dc:''},{route:'R-B2',dc:''},{route:'R-C1',dc:''},{route:'R-C2',dc:''},{route:'R-D1',dc:''},{route:'R-D2',dc:''},{route:'R-E1',dc:''},{route:'R-E2',dc:''}];saveDB('routes');}else{normalizeRoutes();}
+  if(!DB.routes.length){DB.routes=[{route:'R-A1',dc:''},{route:'R-A2',dc:''},{route:'R-B1',dc:''},{route:'R-B2',dc:''},{route:'R-C1',dc:''},{route:'R-C2',dc:''},{route:'R-D1',dc:''},{route:'R-D2',dc:''},{route:'R-E1',dc:''},{route:'R-E2',dc:''}];saveDB('routes');}else{normalizeRoutes();saveDB('routes');}
   if(!DB.employees.length)seedEmployees();
   populateAllDropdowns();initDashDCDropdown();initReportDCDropdown();renderDashboard();renderEmployeeTable();renderSettings();renderUsers();renderMovements();renderAssetTable();renderSalaryTable();populateTransferDropdowns();populateSalaryDCFilter();
 }
