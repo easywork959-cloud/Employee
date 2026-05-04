@@ -103,6 +103,7 @@ input[type="file"]{display:none}
   .btn{padding:6px 11px;font-size:12px}
 }
 @media(max-width:480px){.g4{grid-template-columns:1fr!important}.login-card{padding:24px 20px}}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -148,6 +149,8 @@ input[type="file"]{display:none}
         <button class="btn btn-primary btn-sm" onclick="openNewEmpModal()">+ Add</button>
         <label class="btn btn-secondary btn-sm" for="csvUpload" style="cursor:pointer">⬆ Import</label>
         <input type="file" id="csvUpload" accept=".csv" onchange="importCSV(event)">
+        <button class="btn btn-secondary btn-sm" onclick="syncFromSheet()" title="Pull latest data from Google Sheet" id="syncBtn" style="display:none">↻ Sync</button>
+        <div id="syncStatusDot" title="Not connected" style="width:8px;height:8px;border-radius:50%;background:#aaa8a3;flex-shrink:0;display:none;cursor:pointer" onclick="syncFromSheet()"></div>
       </div>
     </div>
     <div class="content-area" id="contentArea">
@@ -480,7 +483,69 @@ let USERS=DB.users.length?DB.users:[
   {username:'rsm01',password:'1234',name:'RSM นางสาวมานี',role:'RSM',region:'NOR',dc:''},
 ];
 function saveDB(k){localStorage.setItem('hr_'+k,JSON.stringify(DB[k]));}
-async function gasCall(p){if(!GAS_URL)return null;try{const r=await fetch(GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&'));return await r.json();}catch(e){return null;}}
+async function gasCall(p){
+  if(!GAS_URL)return null;
+  try{
+    const url=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    const r=await fetch(url);
+    if(!r.ok)return null;
+    return await r.json();
+  }catch(e){return null;}
+}
+
+// ── BIDIRECTIONAL SYNC ────────────────────────────────────────
+let _syncInterval=null;let _syncBusy=false;
+const SYNC_MS=30000;
+
+async function syncFromSheet(silent=false){
+  if(!GAS_URL||_syncBusy)return false;
+  _syncBusy=true;setSyncStatus('syncing');
+  try{
+    const r=await gasCall({action:'getAll'});
+    if(!r||!r.ok){setSyncStatus('error');_syncBusy=false;return false;}
+    let changed=false;
+    if(r.employees&&r.employees.length){DB.employees=r.employees;saveDB('employees');changed=true;}
+    if(r.history&&r.history.length){DB.history=r.history;saveDB('history');changed=true;}
+    if(r.assets&&r.assets.length){DB.assets=r.assets;saveDB('assets');changed=true;}
+    if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');changed=true;}
+    if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');}
+    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');}
+    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');}
+    if(changed)refreshCurrentPage();
+    setSyncStatus('ok');
+    if(!silent)showToast('Synced from Google Sheet ✓');
+    _syncBusy=false;return true;
+  }catch(e){setSyncStatus('error');_syncBusy=false;return false;}
+}
+
+function setSyncStatus(state){
+  const el=document.getElementById('syncStatusDot');if(!el)return;
+  const c={ok:'#16a34a',syncing:'#f59e0b',error:'#dc2626',off:'#aaa8a3'};
+  const t={ok:'Synced ✓',syncing:'Syncing...',error:'Sync failed',off:'Not connected'};
+  el.style.background=c[state]||c.off;el.title=t[state]||'';
+  el.style.animation=state==='syncing'?'spin 1s linear infinite':'';
+}
+
+function startAutoSync(){
+  stopAutoSync();if(!GAS_URL)return;
+  syncFromSheet(true);
+  _syncInterval=setInterval(()=>syncFromSheet(true),SYNC_MS);
+}
+function stopAutoSync(){if(_syncInterval)clearInterval(_syncInterval);_syncInterval=null;}
+
+function refreshCurrentPage(){
+  const active=document.querySelector('.page.active');if(!active)return;
+  const id=active.id.replace('page-','');
+  if(id==='dashboard')renderDashboard();
+  if(id==='employees')renderEmployeeTable();
+  if(id==='transfer'){renderMovements();populateTransferDropdowns();}
+  if(id==='assets')renderAssetTable();
+  if(id==='salary')renderSalaryTable();
+  if(id==='reports')reRunReport();
+  if(id==='users')renderUsers();
+  if(id==='settings')renderSettings();
+  populateAllDropdowns();
+}
 
 // ── PERMISSION SCOPE ──────────────────────────────────────────
 function userScope(){
@@ -540,8 +605,14 @@ function doLogin(){
   document.getElementById('nav-settings').style.display=(isAdmin||isHR)?'':'none';
   document.getElementById('adminNav').style.display=isAdmin?'':'none';
   initApp();nav('dashboard');
+  // Show sync UI if GAS connected
+  if(GAS_URL){
+    document.getElementById('syncBtn').style.display='';
+    document.getElementById('syncStatusDot').style.display='';
+    startAutoSync(); // pull from Sheet + start polling
+  }
 }
-function doLogout(){currentUser=null;document.getElementById('loginScreen').style.display='flex';document.getElementById('loginError').style.display='none';}
+function doLogout(){currentUser=null;stopAutoSync();document.getElementById('loginScreen').style.display='flex';document.getElementById('loginError').style.display='none';}
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
 
@@ -911,6 +982,7 @@ function saveEmployee(){
     const idx=DB.employees.findIndex(e=>e.empID===editId);
     if(idx>=0){const old=DB.employees[idx];emp.createdAt=old.createdAt;emp.resignDate=old.resignDate;emp.resignReason=old.resignReason;DB.employees[idx]=emp;DB.employees[idx].empID=editId;}
     addHistory(editId,emp.firstNameTH+' '+emp.lastNameTH,'Update',emp.dc,'Updated record',currentUser?.username);
+    if(GAS_URL)gasCall({action:'updateEmployee',id:editId,data:JSON.stringify(emp)});
   }else{
     emp.createdAt=new Date().toISOString();DB.employees.push(emp);
     addHistory(emp.empID,emp.firstNameTH+' '+emp.lastNameTH,'New Hire',emp.dc,emp.role,currentUser?.username);
@@ -1050,7 +1122,7 @@ function renderAssetTable(){
   }).filter(Boolean).join('');
   document.getElementById('assetTable').innerHTML=rows||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No assets</td></tr>';
 }
-function returnAsset(id){const a=DB.assets.find(x=>x.assetID===id);if(a){a.status='Returned';saveDB('assets');renderAssetTable();showToast('คืน Asset แล้ว');}}
+function returnAsset(id){const a=DB.assets.find(x=>x.assetID===id);if(a){a.status='Returned';saveDB('assets');if(GAS_URL)gasCall({action:'updateAsset',id:id,data:JSON.stringify({status:'Returned'})});renderAssetTable();showToast('คืน Asset แล้ว');}}
 
 // ── SALARY ────────────────────────────────────────────────────
 function showCurrentSalary(){
@@ -1133,11 +1205,33 @@ function addRoute(){const v=document.getElementById('newRoute').value.trim().toU
 function removeRoute(i){DB.routes.splice(i,1);saveDB('routes');renderSettings();}
 async function saveGASUrl(){
   GAS_URL=document.getElementById('gasURL').value.trim();localStorage.setItem(GAS_KEY,GAS_URL);
-  const el=document.getElementById('gasStatus');if(!GAS_URL){el.textContent='URL removed.';return;}
-  el.textContent='Testing...';el.style.color='var(--muted)';
-  const r=await gasCall({action:'getEmployees'});
-  if(r&&r.rows){el.textContent='✓ Connected! '+r.rows.length+' employees in Sheet.';el.style.color='var(--green)';if(r.rows.length>0){DB.employees=r.rows;saveDB('employees');renderEmployeeTable();}}
-  else{el.textContent='✗ Connection failed.';el.style.color='var(--red)';}
+  const el=document.getElementById('gasStatus');
+  if(!GAS_URL){
+    el.textContent='URL removed.';stopAutoSync();
+    document.getElementById('syncBtn').style.display='none';
+    document.getElementById('syncStatusDot').style.display='none';
+    setSyncStatus('off');return;
+  }
+  el.textContent='Testing...';el.style.color='var(--muted)';setSyncStatus('syncing');
+  const r=await gasCall({action:'getAll'});
+  if(r&&r.ok){
+    el.textContent='✓ Connected!';el.style.color='var(--green)';setSyncStatus('ok');
+    // Load all data from Sheet
+    if(r.employees&&r.employees.length){DB.employees=r.employees;saveDB('employees');}
+    if(r.history&&r.history.length){DB.history=r.history;saveDB('history');}
+    if(r.assets&&r.assets.length){DB.assets=r.assets;saveDB('assets');}
+    if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');}
+    if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');}
+    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');}
+    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');}
+    document.getElementById('syncBtn').style.display='';
+    document.getElementById('syncStatusDot').style.display='';
+    startAutoSync();
+    refreshCurrentPage();
+    showToast('Connected! Loaded '+( r.employees?.length||0)+' employees from Sheet');
+  }else{
+    el.textContent='✗ Connection failed. Check URL.';el.style.color='var(--red)';setSyncStatus('error');
+  }
 }
 
 // ── CSV TEMPLATES — all 5 sections ───────────────────────────
