@@ -334,7 +334,14 @@ input[type="file"]{display:none}
   <div class="stab-panel active" id="st-master">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="g2">
       <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Resign Reasons</div><div id="reasonList" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div><div style="display:flex;gap:6px"><input class="fc" id="newReason" placeholder="Add reason..." style="flex:1"><button class="btn btn-primary btn-sm" onclick="addReason()">Add</button></div></div>
-      <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Distribution Centers</div><div id="dcList" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div><div style="display:flex;gap:6px;flex-wrap:wrap"><input class="fc" id="newDCName" placeholder="DC Name" style="flex:1;min-width:80px"><select class="fc" id="newDCRegion" style="width:90px"><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select><button class="btn btn-primary btn-sm" onclick="addDC()">Add</button></div></div>
+      <div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Distribution Centers</div><div id="dcList" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input class="fc" id="newDCName" placeholder="Code e.g. 04" style="width:70px;flex-shrink:0">
+          <input class="fc" id="newDCLabel" placeholder="ชื่อ e.g. พิษณุโลก" style="flex:1;min-width:90px">
+          <select class="fc" id="newDCRegion" style="width:90px"><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select>
+          <button class="btn btn-primary btn-sm" onclick="addDC()">Add</button>
+        </div>
+      </div>
       <div class="card" style="grid-column:span 1"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Route Codes <span id="routeConflictBadge" style="display:none;margin-left:6px" class="badge badge-resigned">⚠ Conflict</span></div><div id="routeList" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div><div style="display:flex;gap:6px"><input class="fc" id="newRoute" placeholder="e.g. R-A1" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addRoute()">Add</button></div></div>
     </div>
   </div>
@@ -508,10 +515,10 @@ async function syncFromSheet(silent=false){
     if(r.history&&r.history.length){DB.history=r.history;saveDB('history');changed=true;}
     if(r.assets&&r.assets.length){DB.assets=r.assets;saveDB('assets');changed=true;}
     if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');changed=true;}
-    if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');}
-    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');}
-    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');}
-    if(changed)refreshCurrentPage();
+    if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');changed=true;}
+    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');populateDCFilter();changed=true;}
+    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');changed=true;}
+    if(changed){refreshCurrentPage();populateAllDropdowns();}
     setSyncStatus('ok');
     if(!silent)showToast('Synced from Google Sheet ✓');
     _syncBusy=false;return true;
@@ -1063,7 +1070,8 @@ function recordTransfer(){
   emp.dc=toDC;emp.region=toDCObj?toDCObj.region:emp.region;
   if(newRoute)emp.route=newRoute;
   emp.status='Transferred';emp.updatedAt=new Date().toISOString();
-  saveDB('employees');if(GAS_URL)gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});
+  saveDB('employees');
+  if(GAS_URL){gasCall({action:'updateEmployee',id:empId,data:JSON.stringify(emp)});gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});}
   renderMovements();renderEmployeeTable();renderDashboard();
   ['trEmp','trToDC','trDate','trRemark'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('trFromDC').value='';document.getElementById('trRoute').value='';
@@ -1077,7 +1085,8 @@ function recordResign(){
   const emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
   addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Resign',emp.dc,reason,currentUser?.username,remark,date,'');
   emp.status='Resigned';emp.resignDate=date;emp.resignReason=reason;emp.updatedAt=new Date().toISOString();
-  saveDB('employees');if(GAS_URL)gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});
+  saveDB('employees');
+  if(GAS_URL){gasCall({action:'updateEmployee',id:empId,data:JSON.stringify(emp)});gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});}
   renderMovements();renderEmployeeTable();renderDashboard();
   ['rsEmp','rsDate','rsReason','rsLWD','rsRemark'].forEach(id=>{document.getElementById(id).value='';});
   showToast('บันทึก Resign สำเร็จ');
@@ -1184,25 +1193,92 @@ function switchSTab(btn,panelId){
 }
 function renderSettings(){
   const rl=document.getElementById('reasonList');
-  if(rl)rl.innerHTML=DB.reasons.map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0ede8"><span style="font-size:12.5px">${r}</span><button class="btn btn-danger btn-sm" onclick="removeReason(${i})">×</button></div>`).join('');
+  if(rl)rl.innerHTML=DB.reasons.map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0ede8"><span style="font-size:12.5px;flex:1">${r}</span><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editReason(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeReason(${i})">×</button></div></div>`).join('');
   const dl=document.getElementById('dcList');
-  if(dl)dl.innerHTML=DB.dcs.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><span style="font-size:11.5px"><strong>${d.name}</strong> <span style="color:var(--muted)">${d.label} · ${d.region}</span></span><button class="btn btn-danger btn-sm" onclick="removeDC(${i})">×</button></div>`).join('');
+  if(dl)dl.innerHTML=DB.dcs.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><span style="font-size:11.5px;flex:1"><strong>${d.name}</strong> <span style="color:var(--muted)">${d.label} · ${d.region}</span></span><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editDC(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeDC(${i})">×</button></div></div>`).join('');
   const activeRoutes=getActiveRoutes('');const conflicts=DB.routes.filter(r=>activeRoutes.includes(r));
   const cb=document.getElementById('routeConflictBadge');if(cb)cb.style.display=conflicts.length?'inline-flex':'none';
   const rlt=document.getElementById('routeList');
   if(rlt)rlt.innerHTML=DB.routes.map((r,i)=>{
     const isTaken=activeRoutes.includes(r);
     const owner=isTaken?DB.employees.find(e=>e.route===r&&e.status==='Active'):null;
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${r}</span>${isTaken?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${owner?owner.firstNameTH:''}</span>`:''}</div><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div>`;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px;flex:1"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${r}</span>${isTaken?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${owner?owner.firstNameTH:''}</span>`:''}</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editRoute(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div></div>`;
   }).join('');
   const gasEl=document.getElementById('gasURL');if(gasEl)gasEl.value=GAS_URL;
 }
-function addReason(){const v=document.getElementById('newReason').value.trim();if(!v)return;DB.reasons.push(v);saveDB('reasons');document.getElementById('newReason').value='';renderSettings();showToast('เพิ่มเหตุผลแล้ว');}
-function removeReason(i){DB.reasons.splice(i,1);saveDB('reasons');renderSettings();}
-function addDC(){const n=document.getElementById('newDCName').value.trim();const r=document.getElementById('newDCRegion').value;if(!n)return;DB.dcs.push({name:'DC-'+n.toUpperCase(),region:r,label:n});saveDB('dcs');document.getElementById('newDCName').value='';renderSettings();populateDCFilter();showToast('เพิ่ม DC แล้ว');}
-function removeDC(i){DB.dcs.splice(i,1);saveDB('dcs');renderSettings();}
-function addRoute(){const v=document.getElementById('newRoute').value.trim().toUpperCase();if(!v)return;if(DB.routes.includes(v)){showToast('Route นี้มีอยู่แล้ว');return;}DB.routes.push(v);saveDB('routes');document.getElementById('newRoute').value='';renderSettings();showToast('เพิ่ม Route แล้ว');}
-function removeRoute(i){DB.routes.splice(i,1);saveDB('routes');renderSettings();}
+function addReason(){
+  const v=document.getElementById('newReason').value.trim();if(!v)return;
+  DB.reasons.push(v);saveDB('reasons');
+  if(GAS_URL)gasCall({action:'saveReason',value:v});
+  document.getElementById('newReason').value='';renderSettings();showToast('เพิ่มเหตุผลแล้ว');
+}
+function removeReason(i){
+  const v=DB.reasons[i];
+  DB.reasons.splice(i,1);saveDB('reasons');
+  if(GAS_URL)gasCall({action:'deleteReason',value:v});
+  renderSettings();
+}
+function editReason(i){
+  const old=DB.reasons[i];
+  const nv=prompt('แก้ไขเหตุผล:',old);
+  if(!nv||nv===old)return;
+  if(GAS_URL)gasCall({action:'deleteReason',value:old});
+  DB.reasons[i]=nv.trim();saveDB('reasons');
+  if(GAS_URL)gasCall({action:'saveReason',value:nv.trim()});
+  renderSettings();showToast('แก้ไขสำเร็จ');
+}
+function addDC(){
+  const n=document.getElementById('newDCName').value.trim();
+  const r=document.getElementById('newDCRegion').value;
+  const lbl=document.getElementById('newDCLabel').value.trim()||n;
+  if(!n)return;
+  const dcName='DC-'+r+'-'+n.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const dc={name:dcName,region:r,label:lbl};
+  DB.dcs.push(dc);saveDB('dcs');
+  if(GAS_URL)gasCall({action:'saveDC',data:JSON.stringify(dc)});
+  document.getElementById('newDCName').value='';
+  const lblEl=document.getElementById('newDCLabel');if(lblEl)lblEl.value='';
+  renderSettings();populateDCFilter();showToast('เพิ่ม DC แล้ว: '+dcName);
+}
+function removeDC(i){
+  const dc=DB.dcs[i];
+  DB.dcs.splice(i,1);saveDB('dcs');
+  if(GAS_URL)gasCall({action:'deleteDC',value:dc.name});
+  renderSettings();
+}
+function editDC(i){
+  const d=DB.dcs[i];
+  const lbl=prompt('แก้ไข Label DC '+d.name+':',d.label);
+  if(!lbl||lbl===d.label)return;
+  DB.dcs[i].label=lbl.trim();saveDB('dcs');
+  if(GAS_URL)gasCall({action:'deleteDC',value:d.name}).then(()=>gasCall({action:'saveDC',data:JSON.stringify(DB.dcs[i])}));
+  renderSettings();showToast('แก้ไข DC สำเร็จ');
+}
+function addRoute(){
+  const v=document.getElementById('newRoute').value.trim().toUpperCase();
+  if(!v)return;
+  if(DB.routes.includes(v)){showToast('Route นี้มีอยู่แล้ว');return;}
+  DB.routes.push(v);saveDB('routes');
+  if(GAS_URL)gasCall({action:'saveRoute',value:v});
+  document.getElementById('newRoute').value='';renderSettings();showToast('เพิ่ม Route แล้ว: '+v);
+}
+function removeRoute(i){
+  const v=DB.routes[i];
+  DB.routes.splice(i,1);saveDB('routes');
+  if(GAS_URL)gasCall({action:'deleteRoute',value:v});
+  renderSettings();
+}
+function editRoute(i){
+  const old=DB.routes[i];
+  const nv=prompt('แก้ไข Route:',old);
+  if(!nv||nv===old)return;
+  const nvu=nv.trim().toUpperCase();
+  if(DB.routes.includes(nvu)){showToast('Route นี้มีอยู่แล้ว');return;}
+  if(GAS_URL)gasCall({action:'deleteRoute',value:old});
+  DB.routes[i]=nvu;saveDB('routes');
+  if(GAS_URL)gasCall({action:'saveRoute',value:nvu});
+  renderSettings();showToast('แก้ไข Route สำเร็จ');
+}
 async function saveGASUrl(){
   GAS_URL=document.getElementById('gasURL').value.trim();localStorage.setItem(GAS_KEY,GAS_URL);
   const el=document.getElementById('gasStatus');
@@ -1222,12 +1298,12 @@ async function saveGASUrl(){
     if(r.assets&&r.assets.length){DB.assets=r.assets;saveDB('assets');}
     if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');}
     if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');}
-    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');}
+    if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');populateDCFilter();}
     if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');}
     document.getElementById('syncBtn').style.display='';
     document.getElementById('syncStatusDot').style.display='';
     startAutoSync();
-    refreshCurrentPage();
+    refreshCurrentPage();populateAllDropdowns();
     showToast('Connected! Loaded '+( r.employees?.length||0)+' employees from Sheet');
   }else{
     el.textContent='✗ Connection failed. Check URL.';el.style.color='var(--red)';setSyncStatus('error');
@@ -1311,7 +1387,14 @@ function saveUser(){
   const idx=document.getElementById('editUserIdx').value;
   const u={username:document.getElementById('newUsername').value.trim(),password:document.getElementById('newPassword').value,name:document.getElementById('newUserName').value.trim(),role:document.getElementById('newUserRole').value,region:document.getElementById('newUserRegion').value,dc:document.getElementById('newUserDC').value};
   if(!u.username||!u.password||!u.name){showToast('กรุณากรอกข้อมูล');return;}
-  if(idx!=='')USERS[parseInt(idx)]=u;else USERS.push(u);
+  if(idx!==''){
+    const old=USERS[parseInt(idx)];
+    USERS[parseInt(idx)]=u;
+    if(GAS_URL)gasCall({action:'updateUser',id:old.username,data:JSON.stringify(u)});
+  }else{
+    USERS.push(u);
+    if(GAS_URL)gasCall({action:'addUser',data:JSON.stringify(u)});
+  }
   DB.users=USERS;saveDB('users');closeModal('addUserModal');
   document.getElementById('editUserIdx').value='';document.getElementById('userModalTitle').textContent='Add System User';
   renderUsers();showToast(idx!==''?'แก้ไข User สำเร็จ':'เพิ่ม User สำเร็จ');
