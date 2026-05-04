@@ -203,7 +203,7 @@ input[type="file"]{display:none}
     <div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="exportEmployeesCSV()">Export CSV</button><button class="btn btn-primary btn-sm" onclick="openNewEmpModal()">+ Add</button></div>
   </div>
   <div class="filter-bar">
-    <select class="fc" style="width:110px" id="fRegion" onchange="filterEmployees()"><option value="">All Regions</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select>
+    <select class="fc" style="width:110px" id="fRegion" onchange="onEmpRegionChange()"><option value="">All Regions</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select>
     <select class="fc" style="width:130px" id="fDC" onchange="filterEmployees()"><option value="">All DC</option></select>
     <select class="fc" style="width:110px" id="fRole" onchange="filterEmployees()"><option value="">All Roles</option><option>ASM</option><option>RSM</option><option>Salesman</option><option>HHT</option></select>
     <select class="fc" style="width:110px" id="fStatus" onchange="filterEmployees()"><option value="">All Status</option><option>Active</option><option>Resigned</option><option>Transferred</option><option>Probation</option></select>
@@ -226,7 +226,7 @@ input[type="file"]{display:none}
       <div class="fg"><label class="flabel">Employee</label><select class="fc" id="trEmp" onchange="autoFillTransfer()"><option value="">Select employee...</option></select></div>
       <div class="fgrid">
         <div class="fg"><label class="flabel">From DC</label><input class="fc" id="trFromDC" readonly style="background:#f0ede8"></div>
-        <div class="fg"><label class="flabel">To DC</label><select class="fc" id="trToDC"><option value="">Select DC...</option></select></div>
+        <div class="fg"><label class="flabel">To DC</label><select class="fc" id="trToDC" onchange="onTransferDCChange()"><option value="">Select DC...</option></select></div>
       </div>
       <div class="fg"><label class="flabel">New Route Code</label><select class="fc" id="trRoute" onchange="checkTransferRouteWarn(this.value)"><option value="">Keep current route</option></select></div>
       <div id="trRouteWarn" style="display:none" class="ibox ibox-amber">⚠ Route นี้มีพนักงาน Active อยู่แล้ว กรุณาตรวจสอบ</div>
@@ -342,7 +342,13 @@ input[type="file"]{display:none}
           <button class="btn btn-primary btn-sm" onclick="addDC()">Add</button>
         </div>
       </div>
-      <div class="card" style="grid-column:span 1"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Route Codes <span id="routeConflictBadge" style="display:none;margin-left:6px" class="badge badge-resigned">⚠ Conflict</span></div><div id="routeList" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div><div style="display:flex;gap:6px"><input class="fc" id="newRoute" placeholder="e.g. R-A1" style="flex:1"><button class="btn btn-primary btn-sm" onclick="addRoute()">Add</button></div></div>
+      <div class="card" style="grid-column:span 1"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Route Codes <span id="routeConflictBadge" style="display:none;margin-left:6px" class="badge badge-resigned">⚠ Conflict</span></div><div id="routeList" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input class="fc" id="newRoute" placeholder="Route code e.g. R-A3" style="flex:1;min-width:100px">
+          <select class="fc" id="newRouteDC" style="width:130px"><option value="">No DC link</option></select>
+          <button class="btn btn-primary btn-sm" onclick="addRoute()">Add</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="stab-panel" id="st-templates">
@@ -407,7 +413,7 @@ input[type="file"]{display:none}
       <div class="fg"><label class="flabel">Region *</label><select class="fc" id="empRegion" onchange="populateDCDropdown('empDC',this.value);populateReportsList()"><option value="">Select...</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select></div>
     </div>
     <div class="fgrid">
-      <div class="fg"><label class="flabel">DC *</label><select class="fc" id="empDC" onchange="populateReportsList()"><option value="">Select Region first</option></select></div>
+      <div class="fg"><label class="flabel">DC *</label><select class="fc" id="empDC" onchange="onEmpDCChange()"><option value="">Select Region first</option></select></div>
       <div class="fg">
         <label class="flabel">Route Code</label>
         <select class="fc" id="empRoute" onchange="checkEmpRouteWarn(this.value)"><option value="">No Route</option></select>
@@ -517,7 +523,7 @@ async function syncFromSheet(silent=false){
     if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');changed=true;}
     if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');changed=true;}
     if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');populateDCFilter();changed=true;}
-    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');changed=true;}
+    if(r.routes&&r.routes.length){DB.routes=r.routes.map(x=>typeof x==='string'?{route:x,dc:''}:x);saveDB('routes');changed=true;}
     if(changed){refreshCurrentPage();populateAllDropdowns();}
     setSyncStatus('ok');
     if(!silent)showToast('Synced from Google Sheet ✓');
@@ -570,6 +576,9 @@ function applyScope(data){
 function getActiveRoutes(excludeId){
   return DB.employees.filter(e=>e.status==='Active'&&e.route&&e.empID!==excludeId).map(e=>e.route);
 }
+function getRouteCode(r){return typeof r==='object'?(r.route||r):String(r);}
+function getRouteDC(r){return typeof r==='object'?(r.dc||''):''}
+function normalizeRoutes(){DB.routes=DB.routes.map(r=>typeof r==='string'||typeof r!=='object'?{route:String(r),dc:''}:r);}
 function isRouteTaken(route,excludeId){
   return route?getActiveRoutes(excludeId).includes(route):false;
 }
@@ -628,7 +637,7 @@ function initApp(){
   if(!DB.dcs.length){
     DB.dcs=[{name:'DC-NOR-01',region:'NOR',label:'เชียงใหม่'},{name:'DC-NOR-02',region:'NOR',label:'เชียงราย'},{name:'DC-NOR-03',region:'NOR',label:'ลำปาง'},{name:'DC-NOE-01',region:'NOE',label:'ขอนแก่น'},{name:'DC-NOE-02',region:'NOE',label:'อุดรธานี'},{name:'DC-NOE-03',region:'NOE',label:'นครราชสีมา'},{name:'DC-BKKCT-01',region:'BKKCT',label:'กรุงเทพ N'},{name:'DC-BKKCT-02',region:'BKKCT',label:'กรุงเทพ S'},{name:'DC-BKKCT-03',region:'BKKCT',label:'นนทบุรี'},{name:'DC-SOU-01',region:'SOU',label:'สุราษฎร์ธานี'},{name:'DC-SOU-02',region:'SOU',label:'ภูเก็ต'},{name:'DC-SOU-03',region:'SOU',label:'หาดใหญ่'}];saveDB('dcs');
   }
-  if(!DB.routes.length){DB.routes=['R-A1','R-A2','R-B1','R-B2','R-C1','R-C2','R-D1','R-D2','R-E1','R-E2'];saveDB('routes');}
+  if(!DB.routes.length){DB.routes=[{route:'R-A1',dc:''},{route:'R-A2',dc:''},{route:'R-B1',dc:''},{route:'R-B2',dc:''},{route:'R-C1',dc:''},{route:'R-C2',dc:''},{route:'R-D1',dc:''},{route:'R-D2',dc:''},{route:'R-E1',dc:''},{route:'R-E2',dc:''}];saveDB('routes');}else{normalizeRoutes();}
   if(!DB.employees.length)seedEmployees();
   populateAllDropdowns();initDashDCDropdown();initReportDCDropdown();renderDashboard();renderEmployeeTable();renderSettings();renderUsers();renderMovements();renderAssetTable();renderSalaryTable();populateTransferDropdowns();populateSalaryDCFilter();
 }
@@ -678,40 +687,51 @@ function populateDCDropdown(selId,region){
   DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{const o=document.createElement('option');o.value=d.name;o.textContent=d.name+' ('+d.label+')';sel.appendChild(o);});
   if(prev)sel.value=prev;
 }
-function populateDCFilter(){
+function populateDCFilter(region){
   const sel=document.getElementById('fDC');if(!sel)return;
+  const prev=sel.value;
   sel.innerHTML='<option value="">All DC</option>';
-  DB.dcs.forEach(d=>{sel.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{sel.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  if(prev&&!region)sel.value=prev;
+}
+function onEmpRegionChange(){
+  const region=document.getElementById('fRegion')?.value||'';
+  populateDCFilter(region);filterEmployees();
 }
 function populateSalaryDCFilter(){
   const sel=document.getElementById('fSalDC');if(!sel)return;
   sel.innerHTML='<option value="">All DC</option>';
   DB.dcs.forEach(d=>{sel.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
 }
-function populateRouteDropdown(selId,excludeId){
+function populateRouteDropdown(selId,excludeId,filterDC){
   const sel=document.getElementById(selId);if(!sel)return;
   const prev=sel.value;
   const taken=getActiveRoutes(excludeId);
   sel.innerHTML='<option value="">No Route</option>';
-  DB.routes.forEach(r=>{
-    const isTaken=taken.includes(r);
+  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !filterDC||!dc||dc===filterDC;});
+  routes.forEach(r=>{
+    const code=getRouteCode(r);const dc=getRouteDC(r);
+    const isTaken=taken.includes(code);
     const opt=document.createElement('option');
-    opt.value=r;opt.textContent=r+(isTaken?' ⚠ (Taken)':'');
+    opt.value=code;opt.textContent=code+(dc?' ('+dc+')':'')+(isTaken?' ⚠':'');
     if(isTaken)opt.style.color='#dc2626';
     sel.appendChild(opt);
   });
   if(prev)sel.value=prev;
 }
-function populateTransferRouteDropdown(empId){
+
+function populateTransferRouteDropdown(empId,targetDC){
   const sel=document.getElementById('trRoute');if(!sel)return;
   const emp=DB.employees.find(e=>e.empID===empId);
-  const cur=emp?.route||'';
+  const cur=emp?.route||'';const useDC=targetDC||emp?.dc||'';
   const taken=getActiveRoutes(empId);
   sel.innerHTML=`<option value="">Keep current${cur?' ('+cur+')':''}</option>`;
-  DB.routes.forEach(r=>{
-    const isTaken=taken.includes(r);
+  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !useDC||!dc||dc===useDC;});
+  routes.forEach(r=>{
+    const code=getRouteCode(r);const dc=getRouteDC(r);
+    const isTaken=taken.includes(code);
     const opt=document.createElement('option');
-    opt.value=r;opt.textContent=r+(isTaken?' ⚠ (Taken)':'');
+    opt.value=code;opt.textContent=code+(dc?' ('+dc+')':'')+(isTaken?' ⚠':'');
     if(isTaken)opt.style.color='#dc2626';
     sel.appendChild(opt);
   });
@@ -766,12 +786,30 @@ function populateReportsList(){
     });
   }
 }
+function onEmpDCChange(){
+  populateReportsList();
+  const editId=document.getElementById('editEmpId').value;
+  const dc=document.getElementById('empDC').value;
+  populateRouteDropdown('empRoute',editId,dc);
+}
+function onTransferDCChange(){
+  const empId=document.getElementById('trEmp').value;
+  const toDC=document.getElementById('trToDC').value;
+  if(empId)populateTransferRouteDropdown(empId,toDC);
+  else if(toDC){
+    const sel=document.getElementById('trRoute');if(!sel)return;
+    sel.innerHTML='<option value="">Keep current route</option>';
+    DB.routes.filter(r=>!getRouteDC(r)||getRouteDC(r)===toDC).forEach(r=>{
+      const code=getRouteCode(r);const opt=document.createElement('option');opt.value=code;opt.textContent=code;sel.appendChild(opt);
+    });
+  }
+}
 function autoFillTransfer(){
   const empId=document.getElementById('trEmp').value;
   const emp=DB.employees.find(e=>e.empID===empId);
   document.getElementById('trFromDC').value=emp?emp.dc:'';
   document.getElementById('trRouteWarn').style.display='none';
-  if(emp)populateTransferRouteDropdown(empId);
+  if(emp)populateTransferRouteDropdown(empId,emp.dc);
 }
 
 // ── PERIOD FILTER HELPER ──────────────────────────────────────
@@ -1125,9 +1163,11 @@ function renderAssetTable(){
   if(fStat)data=data.filter(a=>a.status===fStat);
   const rows=data.map(a=>{
     const emp=DB.employees.find(e=>e.empID===a.empID);
-    if(sc){if(sc.role==='ASM'&&emp?.dc!==sc.dc)return'';if(sc.role==='RSM'&&emp?.region!==sc.region)return'';}
-    if(search&&!(((emp?emp.firstNameTH+' '+emp.lastNameTH:'')+' '+a.empID).toLowerCase().includes(search)))return'';
-    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${emp?emp.firstNameTH+' '+emp.lastNameTH:a.empID}</td><td style="font-size:12px">${emp?.dc||'-'}</td><td>${a.type}</td><td>${a.desc||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td><td><button class="btn btn-secondary btn-sm" onclick="returnAsset('${a.assetID}')">Return</button></td></tr>`;
+    const empDC=emp?.dc||'-';const empRegion=emp?.region||'-';
+    const empName=emp?(emp.firstNameTH+' '+emp.lastNameTH):a.empID;
+    if(sc){if(sc.role==='ASM'&&empDC!==sc.dc)return'';if(sc.role==='RSM'&&empRegion!==sc.region)return'';}
+    if(search&&!(empName+' '+a.empID).toLowerCase().includes(search))return'';
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${empName}</td><td style="font-size:12px">${empDC}</td><td>${a.type}</td><td>${a.desc||'-'}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td><td><button class="btn btn-secondary btn-sm" onclick="returnAsset('${a.assetID}')">Return</button></td></tr>`;
   }).filter(Boolean).join('');
   document.getElementById('assetTable').innerHTML=rows||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No assets</td></tr>';
 }
@@ -1200,11 +1240,15 @@ function renderSettings(){
   const cb=document.getElementById('routeConflictBadge');if(cb)cb.style.display=conflicts.length?'inline-flex':'none';
   const rlt=document.getElementById('routeList');
   if(rlt)rlt.innerHTML=DB.routes.map((r,i)=>{
-    const isTaken=activeRoutes.includes(r);
-    const owner=isTaken?DB.employees.find(e=>e.route===r&&e.status==='Active'):null;
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px;flex:1"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${r}</span>${isTaken?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${owner?owner.firstNameTH:''}</span>`:''}</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editRoute(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div></div>`;
+    const rcode=getRouteCode(r);const rdc=getRouteDC(r);
+    const isTakenR=activeRoutes.includes(rcode);
+    const ownerR=isTakenR?DB.employees.find(e=>e.route===rcode&&e.status==='Active'):null;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px;flex:1"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${rcode}</span>${rdc?`<span style="font-size:10.5px;color:var(--muted)">${rdc}</span>`:''} ${isTakenR?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${ownerR?ownerR.firstNameTH:''}</span>`:''}</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editRoute(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div></div>`;
   }).join('');
   const gasEl=document.getElementById('gasURL');if(gasEl)gasEl.value=GAS_URL;
+  // Populate newRouteDC dropdown
+  const nrDC=document.getElementById('newRouteDC');
+  if(nrDC){nrDC.innerHTML='<option value="">No DC link</option>';DB.dcs.forEach(d=>{nrDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});}
 }
 function addReason(){
   const v=document.getElementById('newReason').value.trim();if(!v)return;
@@ -1256,27 +1300,31 @@ function editDC(i){
 }
 function addRoute(){
   const v=document.getElementById('newRoute').value.trim().toUpperCase();
+  const dc=document.getElementById('newRouteDC')?.value||'';
   if(!v)return;
-  if(DB.routes.includes(v)){showToast('Route นี้มีอยู่แล้ว');return;}
-  DB.routes.push(v);saveDB('routes');
-  if(GAS_URL)gasCall({action:'saveRoute',value:v});
-  document.getElementById('newRoute').value='';renderSettings();showToast('เพิ่ม Route แล้ว: '+v);
+  if(DB.routes.some(r=>getRouteCode(r)===v)){showToast('Route นี้มีอยู่แล้ว');return;}
+  const obj={route:v,dc};
+  DB.routes.push(obj);saveDB('routes');
+  if(GAS_URL)gasCall({action:'saveRoute',value:v,dc:dc});
+  document.getElementById('newRoute').value='';
+  const rdEl=document.getElementById('newRouteDC');if(rdEl)rdEl.value='';
+  renderSettings();showToast('เพิ่ม Route: '+v+(dc?' → '+dc:''));
 }
 function removeRoute(i){
-  const v=DB.routes[i];
+  const r=DB.routes[i];const v=getRouteCode(r);
   DB.routes.splice(i,1);saveDB('routes');
   if(GAS_URL)gasCall({action:'deleteRoute',value:v});
   renderSettings();
 }
 function editRoute(i){
-  const old=DB.routes[i];
-  const nv=prompt('แก้ไข Route:',old);
-  if(!nv||nv===old)return;
+  const r=DB.routes[i];const oldCode=getRouteCode(r);const oldDC=getRouteDC(r);
+  const nv=prompt('แก้ไข Route ('+oldCode+(oldDC?' DC:'+oldDC:'')+'):',oldCode);
+  if(!nv||nv.trim().toUpperCase()===oldCode)return;
   const nvu=nv.trim().toUpperCase();
-  if(DB.routes.includes(nvu)){showToast('Route นี้มีอยู่แล้ว');return;}
-  if(GAS_URL)gasCall({action:'deleteRoute',value:old});
-  DB.routes[i]=nvu;saveDB('routes');
-  if(GAS_URL)gasCall({action:'saveRoute',value:nvu});
+  if(DB.routes.some((x,j)=>j!==i&&getRouteCode(x)===nvu)){showToast('Route นี้มีอยู่แล้ว');return;}
+  if(GAS_URL)gasCall({action:'deleteRoute',value:oldCode});
+  DB.routes[i]={route:nvu,dc:oldDC};saveDB('routes');
+  if(GAS_URL)gasCall({action:'saveRoute',value:nvu,dc:oldDC});
   renderSettings();showToast('แก้ไข Route สำเร็จ');
 }
 async function saveGASUrl(){
@@ -1299,7 +1347,7 @@ async function saveGASUrl(){
     if(r.salary&&r.salary.length){DB.salary=r.salary;saveDB('salary');}
     if(r.reasons&&r.reasons.length){DB.reasons=r.reasons;saveDB('reasons');}
     if(r.dcs&&r.dcs.length){DB.dcs=r.dcs;saveDB('dcs');populateDCFilter();}
-    if(r.routes&&r.routes.length){DB.routes=r.routes;saveDB('routes');}
+    if(r.routes&&r.routes.length){DB.routes=r.routes.map(x=>typeof x==='string'?{route:x,dc:''}:x);saveDB('routes');}
     document.getElementById('syncBtn').style.display='';
     document.getElementById('syncStatusDot').style.display='';
     startAutoSync();
@@ -1506,13 +1554,15 @@ function runReport(type){
   else if(type==='assets'){
     thead.innerHTML='<tr><th>Asset ID</th><th>Employee</th><th>DC</th><th>Region</th><th>Type</th><th>Serial</th><th>Date</th><th>Status</th></tr>';
     tbody.innerHTML=DB.assets.map(a=>{
-      const emp=DB.employees.find(e=>e.empID===a.empID);if(!emp)return'';
-      if(sc&&sc.role==='ASM'&&emp.dc!==sc.dc)return'';
-      if(sc&&sc.role==='RSM'&&emp.region!==sc.region)return'';
-      if(effDC&&emp.dc!==effDC)return'';
-      if(effRegion&&emp.region!==effRegion)return'';
+      const emp=DB.employees.find(e=>e.empID===a.empID);
+      const empDC=emp?.dc||'-';const empRegion=emp?.region||'-';
+      const empName=emp?(emp.firstNameTH+' '+emp.lastNameTH):a.empID;
+      if(sc&&sc.role==='ASM'&&empDC!==sc.dc)return'';
+      if(sc&&sc.role==='RSM'&&empRegion!==sc.region)return'';
+      if(effDC&&empDC!==effDC)return'';
+      if(effRegion&&empRegion!==effRegion)return'';
       if(period){const r=getPeriodRange(period);if(r&&a.date&&!(new Date(a.date)>=r.start&&new Date(a.date)<=r.end))return'';}
-      return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${emp.firstNameTH+' '+emp.lastNameTH}</td><td>${emp.dc}</td><td>${emp.region}</td><td>${a.type}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td></tr>`;
+      return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${a.assetID}</td><td>${empName}</td><td>${empDC}</td><td>${empRegion}</td><td>${a.type}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${a.serial||'-'}</td><td>${a.date}</td><td><span class="badge ${a.status==='In Use'?'badge-active':'badge-resigned'}">${a.status}</span></td></tr>`;
     }).filter(Boolean).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
   }
   else if(type==='movement'){
