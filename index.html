@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>HR Employee Record System v3</title>
+<title>HR Employee Record System v3.20</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -109,12 +109,13 @@ input[type="file"]{display:none}
 <body>
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <div style="margin-bottom:22px"><div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">HR System v3</div><div style="font-size:20px;font-weight:600">Welcome back</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px">Sign in to continue</div></div>
+    <div style="margin-bottom:22px"><div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">HR System <span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:4px;font-size:9px">v3.12</span></div><div style="font-size:20px;font-weight:600">Welcome back</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px">Sign in to continue</div></div>
     <div class="fg"><label class="flabel">Username</label><input class="fc" id="loginUser" value="admin"></div>
     <div class="fg"><label class="flabel">Password</label><input class="fc" type="password" id="loginPass" value="1234"></div>
     <div id="loginError" style="color:var(--red);font-size:11.5px;margin-bottom:8px;display:none">Invalid credentials</div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Sign In</button>
     <div style="margin-top:12px;padding:10px;background:#f8f7f5;border-radius:8px;font-size:11px;color:var(--muted)"><strong>Demo:</strong> admin/1234 (Full) · asm01/1234 (ASM·NOR·DC01) · rsm01/1234 (RSM·NOR)</div>
+    <div style="margin-top:8px;text-align:center"><button onclick="emergencyReset()" style="border:none;background:none;font-size:11px;color:#bbb;cursor:pointer;text-decoration:underline">⚠ Can't login? Reset local data</button></div>
   </div>
 </div>
 
@@ -137,6 +138,7 @@ input[type="file"]{display:none}
       <div class="slabel" id="adminNav">Admin</div>
       <a onclick="nav('settings')" id="nav-settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M4.93 4.93l1.41 1.41M22 12h-2M4 12H2M12 22v-2M12 4V2"/></svg>Settings</a>
       <a onclick="nav('users')" id="nav-users"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>User Management</a>
+      <a onclick="nav('editrequests')" id="nav-editrequests"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Requests <span id="editReqBadge" style="display:none;background:#dc2626;color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></a>
     </div>
     <div style="margin-top:auto;padding:12px 20px;border-top:1px solid #2a2a28"><a onclick="doLogout()" style="font-size:12px;color:#7a7875;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</a></div>
   </div>
@@ -220,9 +222,9 @@ input[type="file"]{display:none}
 <div class="page" id="page-transfer">
   <div style="font-size:18px;font-weight:600;margin-bottom:4px">Transfer &amp; Resign</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Record movement and exit</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="g2">
+  <div id="transferFormsWrap" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="g2">
     <div class="card">
-      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Record Transfer</div>
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px" id="recordTransferCard">Record Transfer</div>
       <div class="fg"><label class="flabel">Employee</label><select class="fc" id="trEmp" onchange="autoFillTransfer()"><option value="">Select employee...</option></select></div>
       <div class="fgrid">
         <div class="fg"><label class="flabel">From DC</label><input class="fc" id="trFromDC" readonly style="background:#f0ede8"></div>
@@ -235,12 +237,12 @@ input[type="file"]{display:none}
       <button class="btn btn-primary" onclick="recordTransfer()">Record Transfer</button>
     </div>
     <div class="card">
-      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px">Record Resignation</div>
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:12px" id="recordResignCard">Record Resignation</div>
       <div class="fg"><label class="flabel">Employee</label><select class="fc" id="rsEmp"><option value="">Select employee...</option></select></div>
       <div class="fg"><label class="flabel">Resign Date</label><input type="date" class="fc" id="rsDate"></div>
       <div class="fg"><label class="flabel">Reason</label><select class="fc" id="rsReason"><option value="">Select reason...</option></select></div>
       <div class="fg"><label class="flabel">Last Working Day</label><input type="date" class="fc" id="rsLWD"></div>
-      <div class="fg"><label class="flabel">Remark</label><input class="fc" id="rsRemark" placeholder="Additional notes..."></div>
+      <div class="fg"><label class="flabel">Remark *</label><input class="fc" id="rsRemark" placeholder="Additional notes (required)"></div>
       <button class="btn btn-danger" onclick="recordResign()">Record Resignation</button>
     </div>
   </div>
@@ -363,7 +365,7 @@ input[type="file"]{display:none}
     </div>
   </div>
   <div class="stab-panel" id="st-gas">
-    <div style="max-width:540px"><div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Google Apps Script Connection</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">เชื่อมต่อกับ Google Sheet เพื่อ sync ข้อมูลแบบ real-time</div><div class="fg"><label class="flabel">Web App URL</label><input class="fc" id="gasURL" placeholder="https://script.google.com/macros/s/.../exec"></div><button class="btn btn-primary btn-sm" onclick="saveGASUrl()">Save &amp; Test</button><div id="gasStatus" style="font-size:11.5px;margin-top:8px"></div><div style="margin-top:14px;padding:12px;background:#f8f7f5;border-radius:8px;font-size:11.5px;color:var(--muted)"><strong>ขั้นตอน:</strong><br>1. Google Sheets → Extensions → Apps Script<br>2. วาง code.gs ที่ได้รับ<br>3. Deploy → Web App → Anyone<br>4. Copy URL มาวางด้านบน</div></div></div>
+    <div style="max-width:540px"><div class="card"><div style="font-size:12.5px;font-weight:600;margin-bottom:10px">Google Apps Script Connection</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">เชื่อมต่อกับ Google Sheet เพื่อ sync ข้อมูลแบบ real-time</div><div class="fg"><label class="flabel">Web App URL</label><input class="fc" id="gasURL" placeholder="https://script.google.com/macros/s/.../exec"></div><div class="fg" style="margin-top:8px"><label class="flabel">Admin Notification Email</label><input class="fc" id="adminEmailInput" type="email" placeholder="admin@company.com"><div style="font-size:11px;color:var(--muted);margin-top:3px">Used for New Hire alerts and E-Route notifications</div></div><button class="btn btn-primary btn-sm" onclick="saveGASUrl()">Save &amp; Test</button><div id="gasStatus" style="font-size:11.5px;margin-top:8px"></div><div style="margin-top:14px;padding:12px;background:#f8f7f5;border-radius:8px;font-size:11.5px;color:var(--muted)"><strong>ขั้นตอน:</strong><br>1. Google Sheets → Extensions → Apps Script<br>2. วาง code.gs ที่ได้รับ<br>3. Deploy → Web App → Anyone<br>4. Copy URL มาวางด้านบน</div></div></div>
   </div>
 </div>
 
@@ -376,6 +378,18 @@ input[type="file"]{display:none}
   <div class="table-wrap"><div class="table-scroll"><table>
     <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Region</th><th>DC Access</th><th>Permission</th><th>Actions</th></tr></thead>
     <tbody id="userTable"></tbody>
+  </table></div></div>
+</div>
+
+<!-- EDIT REQUESTS PAGE (Admin: full table + approve/reject; ASM: own requests only) -->
+<div class="page" id="page-editrequests">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div><div style="font-size:18px;font-weight:600" id="editReqPageTitle">Edit Requests</div><div style="font-size:12px;color:var(--muted)" id="editReqPageSubtitle">Pending profile change requests</div></div>
+    <button class="btn btn-secondary btn-sm" onclick="renderEditRequests()">↻ Refresh</button>
+  </div>
+  <div class="table-wrap"><div class="table-scroll"><table>
+    <thead><tr><th>Date</th><th>Employee</th><th>DC</th><th>Field</th><th>Current Value</th><th>Requested Value</th><th>Reason</th><th>Requested By</th><th>Status</th><th id="editReqActionsHeader">Actions</th></tr></thead>
+    <tbody id="editRequestsTable"></tbody>
   </table></div></div>
 </div>
 
@@ -400,7 +414,7 @@ input[type="file"]{display:none}
       <div class="fg"><label class="flabel">Last Name (EN)</label><input class="fc" id="empLastNameEN"></div>
     </div>
     <div class="fgrid">
-      <div class="fg"><label class="flabel">National ID</label><input class="fc" id="empNatID" placeholder="13 digits"></div>
+      <div class="fg"><label class="flabel">National ID *</label><input class="fc" id="empNatID" placeholder="13 digits"></div>
       <div class="fg"><label class="flabel">Date of Birth</label><input type="date" class="fc" id="empDOB"></div>
     </div>
     <div class="fgrid">
@@ -409,19 +423,21 @@ input[type="file"]{display:none}
     </div>
     <div class="stitle">Work Assignment</div>
     <div class="fgrid">
-      <div class="fg"><label class="flabel">Role *</label><select class="fc" id="empRole" onchange="onRoleChange()"><option>Salesman</option><option>HHT</option><option>ASM</option><option>RSM</option><option>RTM</option><option>GTH</option><option>TMK</option><option>LCA</option><option>Sales Capability</option></select></div>
-      <div class="fg"><label class="flabel">Region *</label><select class="fc" id="empRegion" onchange="populateDCDropdown('empDC',this.value);populateReportsList()"><option value="">Select...</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select></div>
-    </div>
-    <div class="fgrid">
+      <input type="hidden" id="empRole" value="Salesman">
+      <div class="fg"><label class="flabel">Region *</label><select class="fc" id="empRegion" onchange="populateDCDropdown('empDC',this.value)"><option value="">Select...</option><option>NOR</option><option>NOE</option><option>BKKCT</option><option>SOU</option></select></div>
       <div class="fg"><label class="flabel">DC *</label><select class="fc" id="empDC" onchange="onEmpDCChange()"><option value="">Select Region first</option></select></div>
-      <div class="fg">
-        <label class="flabel">Route Code</label>
-        <select class="fc" id="empRoute" onchange="checkEmpRouteWarn(this.value)"><option value="">No Route</option></select>
-        <div id="empRouteWarn" style="display:none;margin-top:4px" class="ibox ibox-amber">⚠ Route นี้มีพนักงาน Active อยู่แล้ว</div>
-      </div>
+    </div>
+    <div class="fg">
+      <label class="flabel">Route Code</label>
+      <select class="fc" id="empRoute" onchange="checkEmpRouteWarn(this.value)"><option value="">No Route</option></select>
+      <div id="empRouteWarn" style="display:none;margin-top:4px;padding:6px 10px;border-radius:6px;font-size:11.5px" class="ibox ibox-amber">⚠ Route นี้มีพนักงาน Active อยู่แล้ว</div>
+    </div>
+    <!-- Hidden E-route link inputs (used by saveEmployee) -->
+    <div id="eRouteLinkSection" style="display:none">
+      <select id="inlineLink1"><option value="">None</option></select>
+      <select id="inlineLink2"><option value="">None</option></select>
     </div>
     <div class="fgrid">
-      <div class="fg"><label class="flabel" id="reportsToLabel">Reports To (ASM)</label><select class="fc" id="empReportsTo"><option value="">None</option></select></div>
       <div class="fg"><label class="flabel">Status</label><select class="fc" id="empStatus"><option>Active</option><option>Probation</option></select></div>
     </div>
     <div class="stitle">Compensation</div>
@@ -474,11 +490,86 @@ input[type="file"]{display:none}
   <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button><button class="btn btn-primary" onclick="saveUser()">Save User</button></div>
 </div></div>
 
+<!-- REQUEST EDIT MODAL -->
+<div class="modal-overlay" id="requestEditModal"><div class="modal" style="max-width:500px">
+  <div class="modal-header"><div style="font-size:15px;font-weight:600">✎ Request Profile Edit</div><button onclick="closeModal('requestEditModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="reqEditEmpId">
+    <div class="ibox ibox-blue" style="margin-bottom:12px">ระบบจะส่ง Request ไปยัง Admin เพื่อพิจารณาการแก้ไข</div>
+    <div class="fg"><label class="flabel">Employee</label><input class="fc" id="reqEditEmpName" readonly style="background:#f0ede8"></div>
+    <div class="fg"><label class="flabel">Field to Change *</label><select class="fc" id="reqEditField" onchange="onReqFieldChange()"><option value="">Select field...</option><option>Route Code</option><option>E-Route Linked Routes</option><option>DC</option><option>Status</option><option>Phone</option><option>Salary</option><option>Other</option></select></div>
+    <div class="fg"><label class="flabel">Current Value</label><input class="fc" id="reqEditCurrent" readonly style="background:#f0ede8"></div>
+    <div class="fg"><label class="flabel">Requested New Value *</label><input class="fc" id="reqEditNew" placeholder="Enter requested value..."></div>
+    <!-- E-Route linked route fields (shown when field = E-Route Linked Routes) -->
+    <div id="reqERouteSection" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-top:-6px">
+      <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:8px">⚡ E-Route Linked Routes</div>
+      <div class="fg" style="margin-bottom:8px"><label class="flabel">Linked Route 1 *</label><select class="fc" id="reqELink1"><option value="">Select route...</option></select></div>
+      <div class="fg" style="margin-bottom:0"><label class="flabel">Linked Route 2 <span style="font-weight:400;color:#b45309">(optional)</span></label><select class="fc" id="reqELink2"><option value="">None</option></select></div>
+    </div>
+    <div class="fg"><label class="flabel">Reason for Change *</label><textarea class="fc" id="reqEditReason" rows="3" placeholder="Provide business justification..." style="resize:vertical"></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('requestEditModal')">Cancel</button><button class="btn btn-primary" onclick="submitRequestEdit()">📧 Send Request to Admin</button></div>
+</div></div>
+
+<!-- E-ROUTE SALES SPARE MODAL -->
+<div class="modal-overlay" id="eRouteModal"><div class="modal" style="max-width:560px">
+  <div class="modal-header"><div><div style="font-size:15px;font-weight:600">⚡ Sales Spare — E Route Assignment</div><div style="font-size:11.5px;color:var(--muted)">Linked Route 1 required · Linked Route 2 optional</div></div><button onclick="closeModal('eRouteModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="eRouteEmpId">
+    <input type="hidden" id="eRouteEmpData">
+    <div class="ibox ibox-amber" style="margin-bottom:12px">⚠ Route นี้เป็น <strong>Sales Spare</strong> — ต้องระบุ Linked Route อย่างน้อย 1 เส้น (Route 2 เป็น optional)</div>
+    <div class="fgrid">
+      <div class="fg"><label class="flabel">Spare Route Code</label><input class="fc" id="eRouteCode" readonly style="background:#f0ede8;font-family:'DM Mono',monospace"></div>
+      <div class="fg"><label class="flabel">DC</label><input class="fc" id="eRouteDC" readonly style="background:#f0ede8"></div>
+    </div>
+    <div class="fg"><label class="flabel">Linked Route 1 * <span style="font-size:11px;color:var(--muted)">(active route in same DC)</span></label><select class="fc" id="eRouteLink1" onchange="validateERouteLinks()"><option value="">Select route...</option></select></div>
+    <div class="fg"><label class="flabel">Linked Route 2 <span style="font-size:11px;color:var(--muted)">(optional — active route in same DC)</span></label><select class="fc" id="eRouteLink2" onchange="validateERouteLinks()"><option value="">None</option></select></div>
+    <div id="eRouteLinkError" style="display:none" class="ibox ibox-amber"></div>
+    <div id="eRouteLinkOk" style="display:none" class="ibox ibox-green">✓ 2 routes linked. Ready to assign.</div>
+    <div class="fg" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+      <label class="flabel">📧 Notification Email (override) <span style="color:var(--muted);font-weight:400">— defaults to Admin Email if blank</span></label>
+      <input class="fc" type="email" id="eRouteEmailTo" placeholder="recipient@example.com">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('eRouteModal')">Cancel</button>
+    <button class="btn btn-secondary" onclick="informAdminERoute(false)">📧 Send Email</button>
+    <button class="btn btn-primary" id="eRouteConfirmBtn" onclick="confirmERouteAssign()" disabled style="opacity:.5">Assign &amp; Notify</button>
+  </div>
+</div></div>
+
+<!-- NEW HIRE EMAIL MODAL -->
+<div class="modal-overlay" id="newHireEmailModal"><div class="modal" style="max-width:480px">
+  <div class="modal-header">
+    <div><div style="font-size:15px;font-weight:600">✅ New Employee Created</div><div style="font-size:11.5px;color:var(--muted)" id="newHireModalSubtitle"></div></div>
+    <button onclick="closeModal('newHireEmailModal')" style="border:none;background:none;cursor:pointer;font-size:20px;color:#999;line-height:1">×</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="newHireEmpData">
+    <div class="ibox ibox-green" style="margin-bottom:14px" id="newHireSuccessMsg"></div>
+    <div style="font-size:12.5px;font-weight:500;margin-bottom:10px">📧 Send Notification Email</div>
+    <div class="fg">
+      <label class="flabel">Recipient Email <span style="font-weight:400;color:var(--muted)">(leave blank to skip)</span></label>
+      <input class="fc" type="email" id="newHireEmailTo" placeholder="recipient@company.com">
+    </div>
+    <div class="fg">
+      <label class="flabel">Additional Note</label>
+      <textarea class="fc" id="newHireEmailNote" rows="2" placeholder="Optional note to include in email..." style="resize:vertical"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" onclick="closeModal('newHireEmailModal')">Skip / Close</button>
+    <button class="btn btn-primary" onclick="sendNewHireEmail()">📧 Send Email</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <script>
 // DATA STORE
 const GAS_KEY='hr_gas_url';
+const ADMIN_EMAIL_KEY='hr_admin_email';
 let GAS_URL=localStorage.getItem(GAS_KEY)||'';
+let ADMIN_EMAIL=localStorage.getItem(ADMIN_EMAIL_KEY)||'';
 let DB={
   employees:JSON.parse(localStorage.getItem('hr_employees')||'[]'),
   history:JSON.parse(localStorage.getItem('hr_history')||'[]'),
@@ -488,22 +579,48 @@ let DB={
   reasons:JSON.parse(localStorage.getItem('hr_reasons')||'["ลาออกเอง","สัญญาหมดอายุ","ปฏิบัติงานไม่ผ่าน","ย้ายที่อยู่","สุขภาพ","ค่าตอบแทนต่ำ","หางานใหม่","อื่นๆ"]'),
   dcs:JSON.parse(localStorage.getItem('hr_dcs')||'[]'),
   routes:JSON.parse(localStorage.getItem('hr_routes')||'[]').map(r=>typeof r==='string'?{route:r,dc:''}:(r&&r.route?r:{route:String(r),dc:''})),
+  editRequests:JSON.parse(localStorage.getItem('hr_editrequests')||'[]'),
 };
 let currentUser=null;
-let USERS=DB.users.length?DB.users:[
+// Validate stored users — must have username + password. If corrupt/empty, use defaults.
+const _storedUsers=DB.users.filter(u=>u&&u.username&&u.password);
+const _defaultUsers=[
   {username:'admin',password:'1234',name:'Admin User',role:'Admin',region:'',dc:''},
   {username:'asm01',password:'1234',name:'ASM นายสมชาย',role:'ASM',region:'NOR',dc:'DC-NOR-01'},
   {username:'rsm01',password:'1234',name:'RSM นางสาวมานี',role:'RSM',region:'NOR',dc:''},
 ];
+// Always ensure admin account exists — merge stored users but guarantee admin is present
+let USERS=(()=>{
+  if(!_storedUsers.length)return _defaultUsers;
+  // If stored users don't include admin, prepend defaults
+  const hasAdmin=_storedUsers.some(u=>u.role==='Admin');
+  return hasAdmin?_storedUsers:[..._defaultUsers,..._storedUsers.filter(u=>u.role!=='Admin')];
+})();
 function saveDB(k){localStorage.setItem('hr_'+k,JSON.stringify(DB[k]));}
 async function gasCall(p){
   if(!GAS_URL)return null;
   try{
-    const url=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-    const r=await fetch(url);
-    if(!r.ok)return null;
-    return await r.json();
-  }catch(e){return null;}
+    // Use POST to avoid URL length limit (GAS GET has ~2KB limit)
+    // GAS Web Apps accept both GET and POST parameters
+    const params=new URLSearchParams();
+    Object.entries(p).forEach(([k,v])=>params.append(k,typeof v==='object'?JSON.stringify(v):String(v)));
+    // Try GET first (simpler), fall back to POST if data is large
+    const dataStr=params.toString();
+    let r;
+    if(dataStr.length<1800){
+      // Short request: use GET
+      r=await fetch(GAS_URL+'?'+dataStr,{method:'GET',mode:'cors'});
+    }else{
+      // Large request: use POST with form data
+      r=await fetch(GAS_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:dataStr});
+    }
+    if(!r.ok){console.error('GAS HTTP error:',r.status);return null;}
+    const text=await r.text();
+    try{return JSON.parse(text);}catch(e){console.error('GAS JSON parse error:',text.substring(0,200));return null;}
+  }catch(err){
+    console.error('gasCall error:',err.message);
+    return null;
+  }
 }
 
 // ── BIDIRECTIONAL SYNC ────────────────────────────────────────
@@ -551,7 +668,24 @@ function refreshCurrentPage(){
   const id=active.id.replace('page-','');
   if(id==='dashboard')renderDashboard();
   if(id==='employees')renderEmployeeTable();
-  if(id==='transfer'){renderMovements();populateTransferDropdowns();}
+  if(id==='transfer'){
+    // Preserve user-entered values before refresh
+    const saved={
+      trEmp:document.getElementById('trEmp')?.value,
+      rsEmp:document.getElementById('rsEmp')?.value,
+      rsReason:document.getElementById('rsReason')?.value,
+      rsDate:document.getElementById('rsDate')?.value,
+      rsRemark:document.getElementById('rsRemark')?.value,
+      rsLWD:document.getElementById('rsLWD')?.value,
+      trDate:document.getElementById('trDate')?.value,
+      trRemark:document.getElementById('trRemark')?.value,
+    };
+    renderMovements();populateTransferDropdowns();
+    // Restore values after dropdown rebuild
+    Object.entries(saved).forEach(function([k,v]){
+      const el=document.getElementById(k);if(el&&v)el.value=v;
+    });
+  }
   if(id==='assets')renderAssetTable();
   if(id==='salary')renderSalaryTable();
   if(id==='reports')reRunReport();
@@ -574,7 +708,8 @@ function applyScope(data){
 
 // ── ROUTE CONFLICT ────────────────────────────────────────────
 function getActiveRoutes(excludeId){
-  return DB.employees.filter(e=>e.status==='Active'&&e.route&&e.empID!==excludeId).map(e=>e.route);
+  // Transferred employees still hold their route until officially reassigned
+  return DB.employees.filter(e=>(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.route&&e.empID!==excludeId).map(e=>e.route);
 }
 function getRouteCode(r){return typeof r==='object'?(r.route||r):String(r);}
 function getRouteDC(r){return typeof r==='object'?(r.dc||''):''}
@@ -589,18 +724,9 @@ function isRouteTaken(route,excludeId){
   return route?getActiveRoutes(excludeId).includes(route):false;
 }
 function getRouteOwner(route,excludeId){
-  return DB.employees.find(e=>e.route===route&&e.status==='Active'&&e.empID!==excludeId);
+  return DB.employees.find(e=>e.route===route&&(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.empID!==excludeId);
 }
-function checkEmpRouteWarn(route){
-  const editId=document.getElementById('editEmpId').value;
-  const w=document.getElementById('empRouteWarn');
-  const sel=document.getElementById('empRoute');
-  if(route&&isRouteTaken(route,editId)){
-    const o=getRouteOwner(route,editId);
-    w.textContent='⚠ Route '+route+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+'(Active) อยู่แล้ว';
-    w.style.display='block';sel.classList.add('warn');
-  }else{w.style.display='none';sel.classList.remove('warn');}
-}
+// checkEmpRouteWarn defined below
 function checkTransferRouteWarn(route){
   const empId=document.getElementById('trEmp').value;
   const w=document.getElementById('trRouteWarn');
@@ -613,11 +739,20 @@ function checkTransferRouteWarn(route){
 
 // ── AUTH ──────────────────────────────────────────────────────
 function doLogin(){
-  const u=document.getElementById('loginUser').value.trim();
-  const p=document.getElementById('loginPass').value;
-  const user=USERS.find(x=>x.username===u&&x.password===p);
-  if(!user){document.getElementById('loginError').style.display='block';return;}
-  currentUser=user;
+  try{
+    const u=document.getElementById('loginUser').value.trim();
+    const p=document.getElementById('loginPass').value;
+    if(!u||!p){
+      document.getElementById('loginError').textContent='กรุณากรอก Username และ Password';
+      document.getElementById('loginError').style.display='block';return;
+    }
+    const user=USERS.find(x=>x.username===u&&x.password===p);
+    if(!user){
+      document.getElementById('loginError').textContent='Invalid credentials — Username หรือ Password ไม่ถูกต้อง';
+      document.getElementById('loginError').style.display='block';return;
+    }
+    document.getElementById('loginError').style.display='none';
+    currentUser=user;
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('sidebarName').textContent=user.name;
   document.getElementById('sidebarRole').textContent=user.role+(user.region?' · '+user.region:'')+(user.dc?' · '+user.dc:'');
@@ -626,15 +761,45 @@ function doLogin(){
   document.getElementById('nav-users').style.display=isAdmin?'':'none';
   document.getElementById('nav-settings').style.display=(isAdmin||isHR)?'':'none';
   document.getElementById('adminNav').style.display=isAdmin?'':'none';
-  initApp();nav('dashboard');
+  document.getElementById('nav-editrequests').style.display=(isAdmin||currentUser?.role==='ASM')?'':'none';
+  initApp();applyRoleVisibility();nav('dashboard');
   // Show sync UI if GAS connected
   if(GAS_URL){
     document.getElementById('syncBtn').style.display='';
     document.getElementById('syncStatusDot').style.display='';
     startAutoSync(); // pull from Sheet + start polling
   }
+  }catch(err){
+    console.error('Login error:',err);
+    document.getElementById('loginError').textContent='Login error: '+err.message+' — Try clearing browser cache (Ctrl+Shift+Delete)';
+    document.getElementById('loginError').style.display='block';
+    currentUser=null;
+    document.getElementById('loginScreen').style.display='flex';
+  }
 }
 function doLogout(){currentUser=null;stopAutoSync();document.getElementById('loginScreen').style.display='flex';document.getElementById('loginError').style.display='none';}
+function applyRoleVisibility(){
+  const role=currentUser?.role||'';
+  const isRSM=role==='RSM';
+  // RSM: hide ALL primary action buttons
+  document.querySelectorAll('button.btn-primary').forEach(function(btn){
+    if(isRSM) btn.style.display='none';
+    else btn.style.display='';
+  });
+  // RSM: hide CSV import label
+  const csvLabel=document.querySelector('label[for="csvUpload"]');
+  if(csvLabel) csvLabel.style.display=isRSM?'none':'';
+  // RSM: hide Transfer/Resign input forms
+  const trWrap=document.getElementById('transferFormsWrap');
+  if(trWrap) trWrap.style.display=isRSM?'none':'';
+}
+function emergencyReset(){
+  if(!confirm('⚠ This will clear ALL local HR data (employees, history, etc.).\n\nUse only if you cannot log in and have a Google Sheet backup.\n\nProceed?'))return;
+  const keysToKeep=[GAS_KEY,ADMIN_EMAIL_KEY];
+  ['hr_employees','hr_history','hr_assets','hr_salary','hr_users','hr_reasons','hr_dcs','hr_routes'].forEach(k=>localStorage.removeItem(k));
+  // Reload page — will reinitialise with demo data and default users
+  location.reload();
+}
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
 
@@ -645,7 +810,7 @@ function initApp(){
   }
   if(!DB.routes.length){DB.routes=[{route:'R-A1',dc:''},{route:'R-A2',dc:''},{route:'R-B1',dc:''},{route:'R-B2',dc:''},{route:'R-C1',dc:''},{route:'R-C2',dc:''},{route:'R-D1',dc:''},{route:'R-D2',dc:''},{route:'R-E1',dc:''},{route:'R-E2',dc:''}];saveDB('routes');}else{normalizeRoutes();saveDB('routes');}
   if(!DB.employees.length)seedEmployees();
-  populateAllDropdowns();initDashDCDropdown();initReportDCDropdown();renderDashboard();renderEmployeeTable();renderSettings();renderUsers();renderMovements();renderAssetTable();renderSalaryTable();populateTransferDropdowns();populateSalaryDCFilter();
+  populateAllDropdowns();initDashDCDropdown();initReportDCDropdown();renderDashboard();updateEditReqBadge();renderEmployeeTable();renderSettings();renderUsers();renderMovements();renderAssetTable();renderSalaryTable();populateTransferDropdowns();populateSalaryDCFilter();
 }
 function seedEmployees(){
   const roles=['Salesman','Salesman','Salesman','HHT','ASM','RSM'];
@@ -683,6 +848,7 @@ function nav(name){
   if(name==='reports'){initReportDCDropdown();}
   if(name==='settings')renderSettings();
   if(name==='users')renderUsers();
+  if(name==='editrequests'){renderEditRequests();}
 }
 
 // ── DROPDOWNS ─────────────────────────────────────────────────
@@ -714,7 +880,7 @@ function populateRouteDropdown(selId,excludeId,filterDC){
   const prev=sel.value;
   const taken=getActiveRoutes(excludeId);
   sel.innerHTML='<option value="">No Route</option>';
-  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !filterDC||!dc||dc===filterDC;});
+  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !filterDC||!dc||dc===filterDC;}).sort((a,b)=>getRouteCode(a).localeCompare(getRouteCode(b),undefined,{numeric:true,sensitivity:'base'}));
   routes.forEach(r=>{
     const code=getRouteCode(r);const dc=getRouteDC(r);
     const isTaken=taken.includes(code);
@@ -732,7 +898,7 @@ function populateTransferRouteDropdown(empId,targetDC){
   const cur=emp?.route||'';const useDC=targetDC||emp?.dc||'';
   const taken=getActiveRoutes(empId);
   sel.innerHTML=`<option value="">Keep current${cur?' ('+cur+')':''}</option>`;
-  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !useDC||!dc||dc===useDC;});
+  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !useDC||!dc||dc===useDC;}).sort((a,b)=>getRouteCode(a).localeCompare(getRouteCode(b),undefined,{numeric:true,sensitivity:'base'}));
   routes.forEach(r=>{
     const code=getRouteCode(r);const dc=getRouteDC(r);
     const isTaken=taken.includes(code);
@@ -755,7 +921,8 @@ function populateAllDropdowns(){
 }
 function populateTransferDropdowns(){
   const sc=userScope();
-  let eligible=DB.employees.filter(e=>e.status==='Active'||e.status==='Probation');
+  // Include Transferred — they are in their new DC and can be transferred/resigned again
+  let eligible=DB.employees.filter(e=>e.status==='Active'||e.status==='Probation'||e.status==='Transferred');
   if(sc){if(sc.role==='ASM'&&sc.dc)eligible=eligible.filter(e=>e.dc===sc.dc);else if(sc.role==='RSM'&&sc.region)eligible=eligible.filter(e=>e.region===sc.region);}
   const opts=eligible.map(e=>`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} (${e.empID} · ${e.dc})</option>`).join('');
   ['trEmp','rsEmp'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select employee...</option>'+opts;});
@@ -768,30 +935,9 @@ function populateAssetEmpDropdown(){
   const sel=document.getElementById('assetEmp');if(!sel)return;sel.innerHTML='';
   applyScope(DB.employees).filter(e=>e.status!=='Resigned').forEach(e=>{sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} (${e.empID})</option>`;});
 }
-// ── Reports To: context-aware ─────────────────────────────────
-function onRoleChange(){populateReportsList();}
-function populateReportsList(){
-  const role=document.getElementById('empRole').value;
-  const dc=document.getElementById('empDC').value;
-  const region=document.getElementById('empRegion').value;
-  const sel=document.getElementById('empReportsTo');
-  const lbl=document.getElementById('reportsToLabel');
-  if(!sel)return;
-  sel.innerHTML='<option value="">None</option>';
-  if(role==='RSM'){
-    lbl.textContent='Reports To (HQ)';
-  }else if(role==='ASM'){
-    lbl.textContent='Reports To (RSM)';
-    DB.employees.filter(e=>e.role==='RSM'&&(!region||e.region===region)).forEach(e=>{
-      sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} · ${e.region}</option>`;
-    });
-  }else{
-    lbl.textContent='Reports To (ASM)';
-    DB.employees.filter(e=>e.role==='ASM'&&(!dc||e.dc===dc)).forEach(e=>{
-      sel.innerHTML+=`<option value="${e.empID}">${e.firstNameTH} ${e.lastNameTH} · ${e.dc}</option>`;
-    });
-  }
-}
+// onRoleChange kept as no-op stub (still bound to empRole onchange in HTML)
+function onRoleChange(){}
+function populateReportsList(){} // legacy stub — feature removed
 function onEmpDCChange(){
   populateReportsList();
   const editId=document.getElementById('editEmpId').value;
@@ -889,7 +1035,8 @@ function renderDashboard(){
 
   // For startDate-based KPIs use period; resigned uses resignDate
   const total=all.length;
-  const active=all.filter(e=>e.status==='Active').length;
+  // Transferred within same DC counts as Active (still working)
+  const active=all.filter(e=>e.status==='Active'||e.status==='Transferred'||e.status==='Probation').length;
   let resigned;
   if(period){
     const r=getPeriodRange(period);
@@ -961,9 +1108,17 @@ function renderEmployeeTable(){
   const data=getFilteredEmployees();
   document.getElementById('empCount').textContent=data.length+' employees';
   const tbody=document.getElementById('empTable');
+  const role=currentUser?.role||'Admin';
+  const canDirectEdit=role==='Admin'||role==='HR';
+  const isRSM=role==='RSM';
+  const isASM=role==='ASM';
   tbody.innerHTML=data.length?data.map(e=>{
     const t=e.startDate?calcTenure(e.startDate,e.status==='Resigned'&&e.resignDate?e.resignDate:null):'-';
-    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td style="font-weight:500">${e.firstNameTH} ${e.lastNameTH}</td><td><span class="ptag">${e.role}</span></td><td style="font-size:12px">${e.dc}</td><td>${e.region}</td><td style="font-family:'DM Mono',monospace;font-size:11.5px">${e.route||'-'}</td><td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td><td style="font-size:12px">${t}</td><td><div style="display:flex;gap:4px"><button class="btn btn-secondary btn-sm" onclick="viewEmployee('${e.empID}')">View</button><button class="btn btn-secondary btn-sm" onclick="editEmployee('${e.empID}')">Edit</button></div></td></tr>`;
+    let actionBtn='';
+    if(canDirectEdit) actionBtn=`<button class="btn btn-secondary btn-sm" onclick="editEmployee('${e.empID}')">Edit</button>`;
+    else if(isASM) actionBtn=`<button class="btn btn-secondary btn-sm" onclick="openRequestEdit('${e.empID}')">✎ Request</button>`;
+    // RSM: read-only (no edit/request button)
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:11px">${e.empID}</td><td style="font-weight:500">${e.firstNameTH} ${e.lastNameTH}</td><td><span class="ptag">${e.role}</span></td><td style="font-size:12px">${e.dc}</td><td>${e.region}</td><td style="font-family:'DM Mono',monospace;font-size:11.5px">${e.route||'-'}</td><td><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></td><td style="font-size:12px">${t}</td><td><div style="display:flex;gap:4px"><button class="btn btn-secondary btn-sm" onclick="viewEmployee('${e.empID}')">View</button>${actionBtn}</div></td></tr>`;
   }).join(''):'<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">No employees found</td></tr>';
 }
 function filterEmployees(){renderEmployeeTable();}
@@ -978,9 +1133,22 @@ function getCurrentSalary(empId){
 }
 
 // ── MODAL ─────────────────────────────────────────────────────
-function openModal(id){document.getElementById(id).classList.add('open');populateAllDropdowns();}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.remove('open');
+  el.style.display=''; // reset any inline display override
+}
+function openModal(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.style.display='flex';
+  el.classList.add('open');
+  populateAllDropdowns();
+}
 function openNewEmpModal(){
+  // RSM cannot add new employees
+  if(currentUser?.role==='RSM'){showToast('RSM ไม่มีสิทธิ์เพิ่มพนักงานใหม่');return;}
   document.getElementById('addEmpTitle').textContent='Add New Employee';
   document.getElementById('editEmpId').value='';
   document.getElementById('empID').value='(auto-generated)';
@@ -990,11 +1158,30 @@ function openNewEmpModal(){
   document.getElementById('empRegion').value='';
   document.getElementById('empStatus').value='Active';
   document.getElementById('empRouteWarn').style.display='none';
-  const sc=userScope();
-  if(sc&&sc.region){document.getElementById('empRegion').value=sc.region;populateDCDropdown('empDC',sc.region);}
-  if(sc&&sc.dc){setTimeout(()=>{document.getElementById('empDC').value=sc.dc;populateReportsList();},60);}
-  populateRouteDropdown('empRoute','');
-  populateReportsList();
+  const _es=document.getElementById('eRouteLinkSection');if(_es)_es.style.display='none';
+  var sc = userScope();
+  var regEl = document.getElementById('empRegion');
+  var dcEl  = document.getElementById('empDC');
+  // Reset states
+  regEl.disabled = false; regEl.style.background = '';
+  dcEl.disabled  = false; dcEl.style.background  = '';
+  if (sc && sc.dc) {
+    // ASM: locked to own Region and own DC only
+    regEl.value = sc.region; regEl.disabled = true; regEl.style.background = '#f0ede8';
+    dcEl.innerHTML = '<option value="' + sc.dc + '">' + sc.dc + '</option>';
+    dcEl.value = sc.dc; dcEl.disabled = true; dcEl.style.background = '#f0ede8';
+    populateRouteDropdown('empRoute', '', sc.dc);   // only routes for this DC
+  } else if (sc && sc.region) {
+    // RSM: locked to own Region, can pick any DC in region
+    regEl.value = sc.region; regEl.disabled = true; regEl.style.background = '#f0ede8';
+    populateDCDropdown('empDC', sc.region);
+    dcEl.disabled = false; dcEl.style.background = '';
+    populateRouteDropdown('empRoute', '');
+  } else {
+    // Admin / HR: no restrictions
+    populateDCDropdown('empDC', '');
+    populateRouteDropdown('empRoute', '');
+  }
   openModal('addEmployeeModal');
 }
 
@@ -1016,7 +1203,6 @@ function saveEmployee(){
     region:document.getElementById('empRegion').value,
     dc:document.getElementById('empDC').value,
     route,
-    reportsTo:document.getElementById('empReportsTo').value,
     status:document.getElementById('empStatus').value,
     salary:parseFloat(document.getElementById('empSalary').value)||0,
     probEnd:document.getElementById('empProbEnd').value,
@@ -1024,24 +1210,29 @@ function saveEmployee(){
     resignDate:'',resignReason:'',updatedAt:new Date().toISOString(),createdBy:currentUser?.username||'admin',
   };
   if(!emp.firstNameTH||!emp.startDate||!emp.dc){showToast('กรุณากรอกข้อมูลที่จำเป็น');return;}
-  // Route conflict: BLOCK with confirm
+  if(!emp.natID){showToast('กรุณากรอก National ID');document.getElementById('empNatID').focus();return;}
+  // E-Route (Sales Spare): open modal to pick linked routes + send email
+  if (route && isERoute(route)) {
+    if (!emp.firstNameTH || !emp.startDate || !emp.dc) { showToast('กรุณากรอกข้อมูลที่จำเป็น'); return; }
+    // Pass full emp data to modal — save happens inside confirmERouteAssign
+    openERouteModal(JSON.stringify(emp), route, emp.dc);
+    return;
+  }
+  // Standard route conflict check
   if(route&&isRouteTaken(route,editId)){
     const o=getRouteOwner(route,editId);
-    if(!confirm(`Route ${route} ถูกใช้โดย ${o?o.firstNameTH+' '+o.lastNameTH:''} (Active) อยู่แล้ว\nยืนยันบันทึกต่อไป?`))return;
+    if(!confirm('Route '+route+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+' (Active)\nยืนยันบันทึกต่อไป?'))return;
   }
-  if(editId){
-    const idx=DB.employees.findIndex(e=>e.empID===editId);
-    if(idx>=0){const old=DB.employees[idx];emp.createdAt=old.createdAt;emp.resignDate=old.resignDate;emp.resignReason=old.resignReason;DB.employees[idx]=emp;DB.employees[idx].empID=editId;}
-    addHistory(editId,emp.firstNameTH+' '+emp.lastNameTH,'Update',emp.dc,'Updated record',currentUser?.username);
-    if(GAS_URL)gasCall({action:'updateEmployee',id:editId,data:JSON.stringify(emp)});
+  const newEmp=saveEmployeeData(emp);
+  closeModal('addEmployeeModal');
+  if(newEmp){
+    // New employee — show email prompt after modal closes
+    showToast('เพิ่มพนักงานใหม่สำเร็จ');
+    var _empSnap=newEmp;
+    setTimeout(function(){openNewHireEmailPrompt(_empSnap);},700);
   }else{
-    emp.createdAt=new Date().toISOString();DB.employees.push(emp);
-    addHistory(emp.empID,emp.firstNameTH+' '+emp.lastNameTH,'New Hire',emp.dc,emp.role,currentUser?.username);
-    if(emp.salary>0){DB.salary.push({empID:emp.empID,type:'Initial',amount:emp.salary,date:emp.startDate,remark:'Starting salary'});saveDB('salary');}
-    if(GAS_URL)gasCall({action:'addEmployee',data:JSON.stringify(emp)});
+    showToast('อัปเดตสำเร็จ');
   }
-  saveDB('employees');closeModal('addEmployeeModal');renderEmployeeTable();renderDashboard();
-  showToast(editId?'อัปเดตสำเร็จ':'เพิ่มพนักงานใหม่สำเร็จ');
 }
 function editEmployee(id){
   const e=DB.employees.find(x=>x.empID===id);if(!e)return;
@@ -1053,12 +1244,26 @@ function editEmployee(id){
   document.getElementById('empEdu').value=e.edu||'ปริญญาตรี';
   document.getElementById('empRole').value=e.role;
   document.getElementById('empRegion').value=e.region;
-  populateDCDropdown('empDC',e.region);
-  document.getElementById('empStatus').value=e.status;
-  document.getElementById('empRouteWarn').style.display='none';
-  populateRouteDropdown('empRoute',e.empID);
+  var sc_edit = userScope();
+  var dcEl_edit = document.getElementById('empDC');
+  if (sc_edit && sc_edit.dc) {
+    // ASM: lock DC to their own only
+    dcEl_edit.innerHTML = '<option value="' + sc_edit.dc + '">' + sc_edit.dc + '</option>';
+    dcEl_edit.value = sc_edit.dc;
+    dcEl_edit.disabled = true; dcEl_edit.style.background = '#f0ede8';
+    populateRouteDropdown('empRoute', e.empID, sc_edit.dc);
+  } else {
+    dcEl_edit.disabled = false; dcEl_edit.style.background = '';
+    populateDCDropdown('empDC', e.region);
+    populateRouteDropdown('empRoute', e.empID);
+  }
+  document.getElementById('empStatus').value = e.status;
+  document.getElementById('empRouteWarn').style.display = 'none';
   populateReportsList();
-  setTimeout(()=>{document.getElementById('empDC').value=e.dc;document.getElementById('empRoute').value=e.route||'';document.getElementById('empReportsTo').value=e.reportsTo||'';},80);
+  setTimeout(function(){
+    if (!(sc_edit && sc_edit.dc)) document.getElementById('empDC').value = e.dc;
+    document.getElementById('empRoute').value = e.route || '';
+  }, 80);
   openModal('addEmployeeModal');
 }
 function viewEmployee(id){
@@ -1069,7 +1274,6 @@ function viewEmployee(id){
   const assets=DB.assets.filter(a=>a.empID===id);
   const sals=DB.salary.filter(s=>s.empID===id);
   const t=e.startDate?calcTenure(e.startDate,e.status==='Resigned'&&e.resignDate?e.resignDate:null):'-';
-  const reportsToName=e.reportsTo?DB.employees.find(x=>x.empID===e.reportsTo)?.firstNameTH+' '+DB.employees.find(x=>x.empID===e.reportsTo)?.lastNameTH:'-';
   document.getElementById('empDetailBody').innerHTML=`
     <div class="tab-bar"><button class="tab-btn active" onclick="switchDTab(this,'dti')">Info</button><button class="tab-btn" onclick="switchDTab(this,'dth')">History (${hist.length})</button><button class="tab-btn" onclick="switchDTab(this,'dta')">Assets (${assets.length})</button><button class="tab-btn" onclick="switchDTab(this,'dts')">Salary (${sals.length})</button></div>
     <div id="dti"><div class="fgrid">
@@ -1079,7 +1283,6 @@ function viewEmployee(id){
       <div><div class="stat-lbl">DC</div><div style="font-weight:500">${e.dc}</div></div>
       <div><div class="stat-lbl">Route</div><div style="font-family:'DM Mono',monospace;font-weight:500">${e.route||'-'}</div></div>
       <div><div class="stat-lbl">Status</div><span class="badge badge-${e.status.toLowerCase()}">${e.status}</span></div>
-      <div><div class="stat-lbl">Reports To</div><div style="font-size:12px">${reportsToName}</div></div>
       <div><div class="stat-lbl">Phone</div><div>${e.phone||'-'}</div></div>
       <div><div class="stat-lbl">Education</div><div>${e.edu||'-'}</div></div>
       <div><div class="stat-lbl">National ID</div><div style="font-family:'DM Mono',monospace;font-size:11.5px">${e.natID||'-'}</div></div>
@@ -1105,9 +1308,37 @@ function recordTransfer(){
   const remark=document.getElementById('trRemark').value;
   if(!empId||!toDC||!date){showToast('กรุณาเลือกพนักงาน, DC และวันที่');return;}
   const emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
+  // E-Route intercept: if new route is E-Route, open modal first
+  if(newRoute&&isERoute(newRoute)){
+    const targetDC=toDC||emp.dc;
+    const linkable=getActiveRoutesInDC(targetDC,empId).filter(function(r){return !isERoute(r.routeCode);});
+    if(linkable.length<1){showToast('DC +targetDC+ ไม่มี Active Route สำหรับ link');return;}
+    // Store transfer context in hidden fields and open E-Route modal
+    const transferContext={mode:'transfer',empId,toDC,date,remark,newRoute};
+    document.getElementById('eRouteEmpData').value=JSON.stringify({empID:empId,...transferContext});
+    document.getElementById('eRouteCode').value=newRoute;
+    document.getElementById('eRouteDC').value=targetDC;
+    document.getElementById('eRouteEmpId').value=empId;
+    const opts1='<option value="">Select route...</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+    const opts2='<option value="">None (optional)</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+    document.getElementById('eRouteLink1').innerHTML=opts1;
+    document.getElementById('eRouteLink2').innerHTML=opts2;
+    document.getElementById('eRouteLinkError').style.display='none';
+    document.getElementById('eRouteLinkOk').style.display='none';
+    document.getElementById('eRouteConfirmBtn').disabled=true;
+    document.getElementById('eRouteConfirmBtn').style.opacity='0.5';
+    document.getElementById('eRouteConfirmBtn').style.display='';
+    var emailEl=document.getElementById('eRouteEmailTo');
+    if(emailEl)emailEl.value=ADMIN_EMAIL||'';
+    // Store transfer context via data attributes for dispatcher
+    document.getElementById('eRouteModal').setAttribute('data-mode','transfer');
+    document.getElementById('eRouteModal').setAttribute('data-ctx',JSON.stringify(transferContext));
+    openModal('eRouteModal');
+    return;
+  }
   if(newRoute&&isRouteTaken(newRoute,empId)){
     const o=getRouteOwner(newRoute,empId);
-    if(!confirm(`Route ${newRoute} ถูกใช้โดย ${o?o.firstNameTH+' '+o.lastNameTH:''} อยู่แล้ว ยืนยัน?`))return;
+    if(!confirm('Route '+newRoute+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+' อยู่แล้ว ยืนยัน?'))return;
   }
   const fromDC=emp.dc;const toDCObj=DB.dcs.find(d=>d.name===toDC);
   addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Transfer',fromDC,toDC,currentUser?.username,remark,date,newRoute||emp.route);
@@ -1120,12 +1351,51 @@ function recordTransfer(){
   ['trEmp','trToDC','trDate','trRemark'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('trFromDC').value='';document.getElementById('trRoute').value='';
   document.getElementById('trRouteWarn').style.display='none';
+  // Reset E-Route modal mode to prevent stale state on next use
+  var erm=document.getElementById('eRouteModal');if(erm)erm.setAttribute('data-mode','new');
   showToast('บันทึก Transfer สำเร็จ'+(newRoute?' · Route: '+newRoute:''));
+}
+function confirmERouteTransfer(ctx){
+  var l1=document.getElementById('eRouteLink1').value;
+  var l2=document.getElementById('eRouteLink2').value;
+  if(!l1){showToast('E-Route requires at least 1 linked route.');return;}
+  if(l2&&l1===l2){showToast('Linked Route 1 and 2 must be different.');return;}
+  var rc=ctx.newRoute;
+  var dc=document.getElementById('eRouteDC').value;
+  var emailTo=(document.getElementById('eRouteEmailTo')?.value||'').trim()||ADMIN_EMAIL;
+  var empId=ctx.empId;
+  var emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
+  // Apply transfer
+  var fromDC=emp.dc;
+  var toDCObj=DB.dcs.find(d=>d.name===ctx.toDC);
+  addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Transfer',fromDC,ctx.toDC,currentUser?.username,ctx.remark,ctx.date,rc);
+  emp.dc=ctx.toDC;emp.region=toDCObj?toDCObj.region:emp.region;
+  emp.route=rc;emp.eRouteLinks=[l1,l2].filter(Boolean);emp.isSalesSpare=true;
+  emp.status='Transferred';emp.updatedAt=new Date().toISOString();
+  saveDB('employees');
+  if(GAS_URL){gasCall({action:'updateEmployee',id:empId,data:JSON.stringify(emp)});gasCall({action:'addHistory',data:JSON.stringify(DB.history[DB.history.length-1])});}
+  // Send E-Route email
+  if(emailTo&&GAS_URL){
+    gasCall({action:'sendEmail',to:emailTo,
+      subject:'[HR] Sales Spare E-Route Transfer — '+rc,
+      body:'E-Route Sales Spare Transfer\n\nEmployee: '+emp.firstNameTH+' '+emp.lastNameTH+' ('+empId+')'+'\nFrom DC: '+fromDC+'\nTo DC: '+ctx.toDC+'\nE-Route: '+rc+'\nLinked Route 1: '+l1+'\nLinked Route 2: '+(l2||'-')+'\nDate: '+ctx.date+'\nBy: '+(currentUser?.name||currentUser?.username||'')
+    });
+    showToast('📧 E-Route Transfer email sent');
+  }
+  closeModal('eRouteModal');
+  renderMovements();renderEmployeeTable();renderDashboard();
+  ['trEmp','trToDC','trDate','trRemark'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var fd=document.getElementById('trFromDC');if(fd)fd.value='';
+  var tr=document.getElementById('trRoute');if(tr)tr.value='';
+  showToast('Transfer + E-Route assigned สำเร็จ');
+  // Restore confirm button to default
+  document.getElementById('eRouteConfirmBtn').onclick=confirmERouteAssign;
 }
 function recordResign(){
   const empId=document.getElementById('rsEmp').value;const date=document.getElementById('rsDate').value;
   const reason=document.getElementById('rsReason').value;const remark=document.getElementById('rsRemark').value;
   if(!empId||!date||!reason){showToast('กรุณากรอกข้อมูลให้ครบ');return;}
+  if(!remark.trim()){showToast('กรุณาใส่ Remark');document.getElementById('rsRemark').focus();return;}
   const emp=DB.employees.find(e=>e.empID===empId);if(!emp)return;
   addHistory(empId,emp.firstNameTH+' '+emp.lastNameTH,'Resign',emp.dc,reason,currentUser?.username,remark,date,'');
   emp.status='Resigned';emp.resignDate=date;emp.resignReason=reason;emp.updatedAt=new Date().toISOString();
@@ -1245,13 +1515,15 @@ function renderSettings(){
   const activeRoutes=getActiveRoutes('');const conflicts=DB.routes.filter(r=>activeRoutes.includes(r));
   const cb=document.getElementById('routeConflictBadge');if(cb)cb.style.display=conflicts.length?'inline-flex':'none';
   const rlt=document.getElementById('routeList');
-  if(rlt)rlt.innerHTML=DB.routes.map((r,i)=>{
+  const sortedR=[...DB.routes].sort((a,b)=>getRouteCode(a).localeCompare(getRouteCode(b),undefined,{numeric:true,sensitivity:'base'}));
+  if(rlt)rlt.innerHTML=sortedR.map((r,i)=>{
     const rcode=getRouteCode(r);const rdc=getRouteDC(r);
     const isTakenR=activeRoutes.includes(rcode);
-    const ownerR=isTakenR?DB.employees.find(e=>e.route===rcode&&e.status==='Active'):null;
+    const ownerR=isTakenR?DB.employees.find(e=>e.route===rcode&&(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')):null;
     return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px;flex:1"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${rcode}</span>${rdc?`<span style="font-size:10.5px;color:var(--muted)">${rdc}</span>`:''} ${isTakenR?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${ownerR?ownerR.firstNameTH:''}</span>`:''}</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editRoute(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div></div>`;
   }).join('');
   const gasEl=document.getElementById('gasURL');if(gasEl)gasEl.value=GAS_URL;
+  loadAdminEmail();
   // Populate newRouteDC dropdown
   const nrDC=document.getElementById('newRouteDC');
   if(nrDC){nrDC.innerHTML='<option value="">No DC link</option>';DB.dcs.forEach(d=>{nrDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});}
@@ -1335,6 +1607,7 @@ function editRoute(i){
 }
 async function saveGASUrl(){
   GAS_URL=document.getElementById('gasURL').value.trim();localStorage.setItem(GAS_KEY,GAS_URL);
+  saveAdminEmail();
   const el=document.getElementById('gasStatus');
   if(!GAS_URL){
     el.textContent='URL removed.';stopAutoSync();
@@ -1596,7 +1869,501 @@ function exportReportPDF(){const{jsPDF}=window.jspdf;const doc=new jsPDF({orient
 // ── GLOBAL SEARCH & UTILS ─────────────────────────────────────
 function globalSearchFn(){const q=document.getElementById('globalSearch').value.toLowerCase();if(!q)return;nav('employees');document.getElementById('empSearch').value=q;filterEmployees();}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>{t.style.opacity='0';},3000);}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
+// ══════════════════════════════════════════════════════════════
+// ADMIN EMAIL
+// ══════════════════════════════════════════════════════════════
+function loadAdminEmail(){
+  const el=document.getElementById('adminEmailInput');
+  if(el)el.value=ADMIN_EMAIL;
+}
+function saveAdminEmail(){
+  const el=document.getElementById('adminEmailInput');
+  if(!el)return;
+  ADMIN_EMAIL=el.value.trim();
+  localStorage.setItem(ADMIN_EMAIL_KEY,ADMIN_EMAIL);
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIX 2: REQUEST EDIT WORKFLOW
+// ══════════════════════════════════════════════════════════════
+function openRequestEdit(empId){
+  const e=DB.employees.find(x=>x.empID===empId);if(!e)return;
+  document.getElementById('reqEditEmpId').value=empId;
+  document.getElementById('reqEditEmpName').value=e.firstNameTH+' '+e.lastNameTH+' ('+empId+')';
+  document.getElementById('reqEditField').value='';
+  document.getElementById('reqEditCurrent').value='';
+  document.getElementById('reqEditNew').value='';
+  document.getElementById('reqEditReason').value='';
+  openModal('requestEditModal');
+}
+function onReqFieldChange(){
+  const empId=document.getElementById('reqEditEmpId').value;
+  const field=document.getElementById('reqEditField').value;
+  const e=DB.employees.find(x=>x.empID===empId);if(!e)return;
+  const vals={
+    'Route Code':e.route||'(none)',
+    'E-Route Linked Routes':(e.eRouteLinks||[]).join(', ')||'(none)',
+    'DC':e.dc||'',
+    'Status':e.status||'',
+    'Phone':e.phone||'',
+    'Salary':e.salary?'฿'+Number(e.salary).toLocaleString():'',
+    'Other':'',
+  };
+  document.getElementById('reqEditCurrent').value=vals[field]||'';
+  // Show/hide E-Route section
+  const sec=document.getElementById('reqERouteSection');
+  const newField=document.getElementById('reqEditNew');
+  if(field==='E-Route Linked Routes'){
+    if(sec)sec.style.display='block';
+    // Hide reqEditNew and its label
+    var nfp=newField?newField.parentElement:null;
+    if(nfp&&nfp.classList.contains('fg'))nfp.style.display='none';
+    else if(newField){newField.style.display='none';}
+    // Populate link dropdowns with active non-E routes in same DC
+    const linkable=getActiveRoutesInDC(e.dc,empId).filter(function(r){return !isERoute(r.routeCode);});
+    const opts1='<option value="">Select route...</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+    const opts2='<option value="">None (optional)</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+    const l1=document.getElementById('reqELink1');const l2=document.getElementById('reqELink2');
+    if(l1){l1.innerHTML=opts1;}
+    if(l2){l2.innerHTML=opts2;}
+    // Pre-select existing linked routes (set after innerHTML)
+    if(l1&&e.eRouteLinks&&e.eRouteLinks[0])l1.value=e.eRouteLinks[0];
+    if(l2&&e.eRouteLinks&&e.eRouteLinks[1])l2.value=e.eRouteLinks[1];
+  }else{
+    if(sec)sec.style.display='none';
+    var nfp2=newField?newField.parentElement:null;
+    if(nfp2&&nfp2.classList.contains('fg'))nfp2.style.display='';
+    else if(newField)newField.style.display='';
+  }
+}
+function submitRequestEdit(){
+  const empId=document.getElementById('reqEditEmpId').value;
+  const field=document.getElementById('reqEditField').value;
+  const newVal=document.getElementById('reqEditNew').value.trim();
+  const reason=document.getElementById('reqEditReason').value.trim();
+  if(!field){showToast('กรุณาเลือก Field ที่ต้องการแก้ไข');return;}
+  if(field!=='E-Route Linked Routes'&&!newVal){showToast('กรุณากรอก Requested New Value');return;}
+  if(!reason){showToast('กรุณาระบุ Reason (บังคับ)');return;}
+  const e=DB.employees.find(x=>x.empID===empId);if(!e)return;
+  // For E-Route Linked Routes: collect from dropdowns
+  let newVal2=newVal;
+  if(field==='E-Route Linked Routes'){
+    const l1v=document.getElementById('reqELink1')?.value||'';
+    const l2v=document.getElementById('reqELink2')?.value||'';
+    if(!l1v){showToast('กรุณาเลือก Linked Route 1');return;}
+    if(l2v&&l1v===l2v){showToast('Route 1 และ 2 ต้องไม่ซ้ำกัน');return;}
+    newVal2=[l1v,l2v].filter(Boolean).join(', ');
+  }
+  const req={
+    id:'REQ-'+Date.now(),
+    type:'EditRequest',empID:empId,empName:e.firstNameTH+' '+e.lastNameTH,
+    dc:e.dc,region:e.region,
+    field,oldValue:document.getElementById('reqEditCurrent').value,
+    newValue:newVal2,reason,
+    requestedBy:currentUser?.username||'unknown',requestedByName:currentUser?.name||'',
+    requestedAt:new Date().toISOString(),
+    status:'Pending',
+  };
+  // Save to DB.editRequests (persistent)
+  if(!DB.editRequests)DB.editRequests=[];
+  DB.editRequests.push(req);
+  localStorage.setItem('hr_editrequests',JSON.stringify(DB.editRequests));
+  // Also log to history
+  addHistory(empId,e.firstNameTH+' '+e.lastNameTH,'EditRequest',e.dc,
+    '[PENDING] '+field+': "'+req.oldValue+'" → "'+newVal+'" | '+reason,
+    currentUser?.username,reason,new Date().toISOString().split('T')[0],'');
+  // Sync to Google Sheet
+  if(GAS_URL)gasCall({action:'addEditRequest',data:JSON.stringify(req)});
+  // Update admin badge
+  updateEditReqBadge();
+  // Send email if configured
+  if(GAS_URL&&ADMIN_EMAIL){
+    gasCall({action:'sendEmail',to:ADMIN_EMAIL,
+      subject:'[HR] Edit Request - '+e.firstNameTH+' '+e.lastNameTH+' ('+empId+')',
+      body:'Edit Request from '+(currentUser?.name||currentUser?.username)+'\n\nEmployee: '+e.firstNameTH+' '+e.lastNameTH+' ('+empId+')\nField: '+field+'\nCurrent: '+req.oldValue+'\nRequested: '+newVal+'\nReason: '+reason+'\nDC: '+e.dc+' | Region: '+e.region+'\n\nLog in to HR System → Edit Requests to approve or reject.'
+    });
+  }
+  closeModal('requestEditModal');
+  showToast('✓ Request ส่งแล้ว — Admin สามารถเห็นได้ใน "Edit Requests"');
+}
+
+function updateEditReqBadge(){
+  if(!DB.editRequests)return;
+  const isASM=currentUser?.role==='ASM';
+  const pending=isASM
+    ?DB.editRequests.filter(r=>r.requestedBy===currentUser?.username&&r.status!=='Pending').length // ASM sees resolved count
+    :DB.editRequests.filter(r=>r.status==='Pending').length; // Admin sees pending count
+  const badge=document.getElementById('editReqBadge');
+  if(badge){badge.textContent=pending;badge.style.display=pending>0?'':'none';}
+}
+
+function renderEditRequests(){
+  const tbody=document.getElementById('editRequestsTable');if(!tbody)return;
+  const isAdmin=currentUser?.role==='Admin'||currentUser?.role==='HR';
+  const isASM=currentUser?.role==='ASM';
+  // Title
+  const titleEl=document.getElementById('editReqPageTitle');
+  const subEl=document.getElementById('editReqPageSubtitle');
+  const hdrEl=document.getElementById('editReqActionsHeader');
+  if(isASM){
+    if(titleEl)titleEl.textContent='My Edit Requests';
+    if(subEl)subEl.textContent='Status of your profile change requests';
+    if(hdrEl)hdrEl.textContent='Status Detail';
+  }else{
+    if(titleEl)titleEl.textContent='Edit Requests';
+    if(subEl)subEl.textContent='Pending profile change requests from ASM';
+    if(hdrEl)hdrEl.textContent='Actions';
+  }
+  if(!DB.editRequests)DB.editRequests=[];
+  // Filter: ASM sees only their own requests
+  const list=isASM
+    ?DB.editRequests.filter(r=>r.requestedBy===currentUser?.username)
+    :DB.editRequests;
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">'+(isASM?'คุณยังไม่มี Edit Request':'No edit requests')+'</td></tr>';
+    return;
+  }
+  tbody.innerHTML=[...list].reverse().map(function(r){
+    const statusColor=r.status==='Pending'?'badge-probation':r.status==='Approved'?'badge-active':'badge-resigned';
+    let lastCol='';
+    if(isAdmin){
+      lastCol=r.status==='Pending'
+        ?'<div style="display:flex;gap:4px">'+
+          '<button class="btn btn-primary btn-sm" onclick="approveEditRequest(\''+r.id+'\')">✓ Approve</button>'+
+          '<button class="btn btn-danger btn-sm" onclick="rejectEditRequest(\''+r.id+'\')">✗ Reject</button>'+
+          '</div>'
+        :'<span style="font-size:11.5px;color:var(--muted)">'+(r.resolvedBy?'by '+r.resolvedBy:'')+'</span>';
+    }else{
+      // ASM: show resolution detail
+      if(r.status==='Rejected'&&r.rejectReason)
+        lastCol='<span style="font-size:11.5px;color:#dc2626">'+r.rejectReason+'</span>';
+      else if(r.status==='Approved')
+        lastCol='<span style="font-size:11.5px;color:#16a34a">Applied ✓</span>';
+      else
+        lastCol='<span style="font-size:11.5px;color:var(--muted)">Awaiting review</span>';
+    }
+    return '<tr>'+
+      '<td style="font-size:12px">'+r.requestedAt.split('T')[0]+'</td>'+
+      '<td style="font-weight:500">'+r.empName+'</td>'+
+      '<td style="font-size:12px">'+r.dc+'</td>'+
+      '<td><span class="ptag">'+r.field+'</span></td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+r.oldValue+'</td>'+
+      '<td style="font-size:12px;font-weight:500">'+r.newValue+'</td>'+
+      '<td style="font-size:12px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis" title="'+r.reason+'">'+r.reason+'</td>'+
+      '<td style="font-size:12px">'+(r.requestedByName||r.requestedBy||'')+'</td>'+
+      '<td><span class="badge '+statusColor+'">'+r.status+'</span></td>'+
+      '<td>'+lastCol+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+function approveEditRequest(reqId){
+  const req=DB.editRequests.find(r=>r.id===reqId);if(!req)return;
+  const emp=DB.employees.find(e=>e.empID===req.empID);if(!emp)return;
+  const fieldMap={'Route Code':'route','DC':'dc','Status':'status','Phone':'phone','Salary':'salary','E-Route Linked Routes':'eRouteLinks'};
+  const key=fieldMap[req.field];
+  if(key){
+    if(req.field==='Salary')emp[key]=parseFloat(req.newValue)||emp.salary;
+    else if(req.field==='E-Route Linked Routes')emp[key]=req.newValue.split(',').map(function(s){return s.trim();}).filter(Boolean);
+    else emp[key]=req.newValue;
+    emp.updatedAt=new Date().toISOString();
+    saveDB('employees');
+    if(GAS_URL)gasCall({action:'updateEmployee',id:emp.empID,data:JSON.stringify(emp)});
+    addHistory(emp.empID,emp.firstNameTH+' '+emp.lastNameTH,'EditApproved',emp.dc,
+      req.field+': "'+req.oldValue+'" → "'+req.newValue+'"',currentUser?.username,'','','');
+  }
+  req.status='Approved';req.resolvedBy=currentUser?.username;req.resolvedAt=new Date().toISOString();
+  localStorage.setItem('hr_editrequests',JSON.stringify(DB.editRequests));
+  if(GAS_URL)gasCall({action:'addEditRequest',data:JSON.stringify(req)});
+  // Notify the ASM who made the request
+  // Use their user email if set, otherwise Admin is responsible for communicating
+  const requester=USERS.find(u=>u.username===req.requestedBy);
+  const notifyEmail=requester?.email||''; // only send if user has email configured
+  if(GAS_URL&&notifyEmail){
+    gasCall({action:'sendEmail',to:notifyEmail,
+      subject:'[HR] Edit Request Approved — '+req.empName,
+      body:'Your edit request has been approved.\n\nResult: APPROVED ✓\nEmployee: '+req.empName+' ('+req.empID+')\nField: '+req.field+'\nNew Value: '+req.newValue+'\nApproved by: '+(currentUser?.name||currentUser?.username)+'\nDate: '+new Date().toLocaleString()
+    });
+  }
+  updateEditReqBadge();renderEditRequests();renderEmployeeTable();
+  showToast('✓ Approved: '+req.empName+' '+req.field+' → '+req.newValue);
+}
+
+function rejectEditRequest(reqId){
+  const req=DB.editRequests.find(r=>r.id===reqId);if(!req)return;
+  const reason=prompt('Reason for rejection (optional):','');
+  if(reason===null)return; // user pressed Cancel
+  req.status='Rejected';req.resolvedBy=currentUser?.username;req.resolvedAt=new Date().toISOString();
+  if(reason)req.rejectReason=reason;
+  addHistory(req.empID,req.empName,'EditRejected',req.dc,
+    req.field+' request rejected'+(reason?': '+reason:''),currentUser?.username,'','','');
+  localStorage.setItem('hr_editrequests',JSON.stringify(DB.editRequests));
+  // Sync to Google Sheet
+  if(GAS_URL)gasCall({action:'addEditRequest',data:JSON.stringify(req)});
+  // Notify the ASM who made the request
+  const requester=USERS.find(u=>u.username===req.requestedBy);
+  const notifyEmail=requester?.email||'';
+  if(GAS_URL&&notifyEmail){
+    gasCall({action:'sendEmail',to:notifyEmail,
+      subject:'[HR] Edit Request Rejected — '+req.empName,
+      body:'Your edit request has been reviewed.\n\nResult: REJECTED ✗\nEmployee: '+req.empName+' ('+req.empID+')\nField: '+req.field+'\nRequested Value: '+req.newValue+'\nReason: '+(reason||'No reason given')+'\n\nReviewed by: '+(currentUser?.name||currentUser?.username)+'\nDate: '+new Date().toLocaleString()
+    });
+  }
+  updateEditReqBadge();renderEditRequests();
+  showToast('Request rejected'+(reason?' — '+reason:''));
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIX 4: E-ROUTE SALES SPARE LOGIC
+// ══════════════════════════════════════════════════════════════
+function isERoute(routeCode){
+  if(!routeCode)return false;
+  // Contains "E" (case-insensitive) — e.g. 101E01, E-A1, SALES-E
+  return /E/i.test(routeCode);
+}
+function getActiveRoutesInDC(dc,excludeEmpId){
+  // Transferred employees within the same DC still hold their route
+  return DB.employees
+    .filter(e=>(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.route&&e.dc===dc&&e.empID!==excludeEmpId)
+    .map(e=>({routeCode:e.route,empID:e.empID,empName:e.firstNameTH+' '+e.lastNameTH}))
+    .sort((a,b)=>a.routeCode.localeCompare(b.routeCode,undefined,{numeric:true,sensitivity:'base'}));
+}
+function checkEmpRouteWarn(routeCode){
+  const editId=document.getElementById('editEmpId').value;
+  const w=document.getElementById('empRouteWarn');
+  const sel=document.getElementById('empRoute');
+  // Always keep the hidden inline section hidden
+  const eSection=document.getElementById('eRouteLinkSection');
+  if(eSection)eSection.style.display='none';
+  // Reset warn box style
+  w.style.background='';w.style.color='';w.className='ibox ibox-amber';
+  if(!routeCode){w.style.display='none';sel.classList.remove('warn');return;}
+  if(isERoute(routeCode)){
+    // E-Route: show small green info note only (no yellow box)
+    w.className='';
+    w.style.cssText='display:block;margin-top:4px;padding:4px 8px;border-radius:5px;font-size:11px;background:#f0fdf4;color:#16a34a;';
+    w.textContent='⚡ Sales Spare Route';
+    sel.classList.remove('warn');
+    return;
+  }
+  if(isRouteTaken(routeCode,editId)){
+    const o=getRouteOwner(routeCode,editId);
+    w.textContent='⚠ Route '+routeCode+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+' (Active)';
+    w.style.display='block';sel.classList.add('warn');
+  }else{w.style.display='none';sel.classList.remove('warn');}
+}
+function validateInlineERoute(){
+  const l1v=(document.getElementById('inlineLink1')?.value||'').trim();
+  const l2v=(document.getElementById('inlineLink2')?.value||'').trim();
+  const wn=document.getElementById('inlineLinkWarn');
+  const ok=document.getElementById('inlineLinkOk');
+  if(wn)wn.style.display='none';if(ok)ok.style.display='none';
+  if(!l1v){if(wn){wn.textContent='⚠ ต้องเลือก Linked Route 1 อย่างน้อย 1 เส้น';wn.style.display='block';}return;}
+  if(l2v&&l2v===l1v){if(wn){wn.textContent='⚠ Route 1 และ Route 2 ต้องไม่ซ้ำกัน';wn.style.display='block';}return;}
+  if(ok){ok.textContent='✓ '+(l2v?'2 routes linked':'1 route linked')+' — Ready';ok.style.display='block';}
+}
+function openERouteModal(empDataJSON,routeCode,dc){
+  var sel1=document.getElementById('eRouteLink1');
+  var sel2=document.getElementById('eRouteLink2');
+  var editId=JSON.parse(empDataJSON||'{}').empID||'';
+  // Filter out other E-routes — only regular active routes can be linked
+  var activeDCRoutes=getActiveRoutesInDC(dc,editId).filter(function(r){return !isERoute(r.routeCode);});
+  if(activeDCRoutes.length<1){
+    showToast('DC "'+dc+'" ยังไม่มี Active Route ที่สามารถ link ได้');
+    return;
+  }
+  document.getElementById('eRouteCode').value=routeCode;
+  document.getElementById('eRouteDC').value=dc;
+  document.getElementById('eRouteEmpId').value=editId;
+  document.getElementById('eRouteEmpData').value=empDataJSON;
+  // l1: required — no empty first option or show placeholder
+  var opts1='<option value="">Select route...</option>'+
+    activeDCRoutes.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+  // l2: optional — first option is "None"
+  var opts2='<option value="">None (optional)</option>'+
+    activeDCRoutes.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
+  sel1.innerHTML=opts1;
+  sel2.innerHTML=opts2;
+  document.getElementById('eRouteLinkError').style.display='none';
+  document.getElementById('eRouteLinkOk').style.display='none';
+  document.getElementById('eRouteConfirmBtn').disabled=true;
+  document.getElementById('eRouteConfirmBtn').style.opacity='0.5';
+  document.getElementById('eRouteConfirmBtn').style.display='';
+  // Pre-fill notification email
+  var emailEl=document.getElementById('eRouteEmailTo');
+  if(emailEl) emailEl.value=ADMIN_EMAIL||'';
+  document.getElementById('eRouteModal').setAttribute('data-mode','new');
+  openModal('eRouteModal');
+}
+function validateERouteLinks(){
+  var l1    = document.getElementById('eRouteLink1').value;
+  var l2    = document.getElementById('eRouteLink2').value;
+  var errEl = document.getElementById('eRouteLinkError');
+  var okEl  = document.getElementById('eRouteLinkOk');
+  var btn   = document.getElementById('eRouteConfirmBtn');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+  btn.disabled        = true;
+  btn.style.opacity   = '0.5';
+  // l1 is required; l2 is optional
+  if (!l1) { return; }
+  if (l2 && l1 === l2) {
+    errEl.textContent    = '⚠ Route 1 and Route 2 must be different';
+    errEl.style.display  = 'block';
+    return;
+  }
+  // l1 present (l2 may be empty) — ready
+  okEl.textContent   = l2 ? '✓ 2 routes linked. Ready to assign.' : '✓ 1 route linked. Ready to assign.';
+  okEl.style.display = 'block';
+  btn.disabled       = false;
+  btn.style.opacity  = '1';
+}
+function confirmERouteDispatch(){
+  var modal=document.getElementById('eRouteModal');
+  var mode=modal?modal.getAttribute('data-mode'):'new';
+  if(mode==='transfer'){
+    var ctx=JSON.parse(modal.getAttribute('data-ctx')||'{}');
+    confirmERouteTransfer(ctx);
+  }else{
+    confirmERouteAssign();
+  }
+}
+function confirmERouteAssign(){
+  var l1 = document.getElementById('eRouteLink1').value;
+  var l2 = document.getElementById('eRouteLink2').value;
+  if (!l1) { showToast('E-Route requires at least 1 linked route.'); return; }
+  if (l2 && l1 === l2) { showToast('Linked Route 1 and 2 must be different.'); return; }
+  const empDataJSON=document.getElementById('eRouteEmpData').value;
+  const emp=JSON.parse(empDataJSON||'{}');
+  emp.eRouteLinks=[l1,l2].filter(Boolean);emp.isSalesSpare=true;
+  // Capture modal values BEFORE closing modal
+  var rc=document.getElementById('eRouteCode').value;
+  var dc=document.getElementById('eRouteDC').value;
+  var emailTo=(document.getElementById('eRouteEmailTo')?.value||'').trim()||ADMIN_EMAIL;
+  // Save employee
+  const newEmp=saveEmployeeData(emp);
+  // Send E-Route notification email immediately (before closing modal so DOM values still valid)
+  if(emailTo&&GAS_URL){
+    gasCall({action:'sendEmail',to:emailTo,
+      subject:'[HR] Sales Spare E-Route — '+rc,
+      body:'E-Route Sales Spare Assignment\n\nEmployee: '+emp.firstNameTH+' '+emp.lastNameTH+' ('+emp.empID+')'+'\nRoute: '+rc+'\nDC: '+dc+'\nLinked Route 1: '+l1+'\nLinked Route 2: '+(l2||'-')+'\nBy: '+(currentUser?.name||currentUser?.username||'')+'\nDate: '+new Date().toLocaleString()
+    }).then(function(r){
+      if(r&&r.ok) showToast('📧 E-Route email sent → '+emailTo);
+      else showToast('⚠ Email failed: '+(r?.error||'check GAS'));
+    });
+  }else if(!GAS_URL){
+    showToast('⚠ GAS not connected — email not sent');
+  }else if(!emailTo){
+    showToast('⚠ No email configured — set Admin Email in Settings');
+  }
+  closeModal('eRouteModal');
+  closeModal('addEmployeeModal');
+  showToast('✓ Sales Spare assigned');
+  // Also open new hire email prompt
+  if(newEmp){
+    setTimeout(function(){openNewHireEmailPrompt(newEmp);},600);
+  }
+}
+function openERouteEmailPrompt(emp,routeCode,l1,l2){
+  const emailEl=document.getElementById('eRouteEmailTo');
+  if(emailEl){
+    emailEl.value=ADMIN_EMAIL||'';
+    const isAdmin=currentUser?.role==='Admin'||currentUser?.role==='HR';
+    emailEl.readOnly=!isAdmin;
+    emailEl.style.background=isAdmin?'':'#f0ede8';
+  }
+  document.getElementById('eRouteCode').value=routeCode;
+  document.getElementById('eRouteDC').value=emp.dc||'';
+  document.getElementById('eRouteLink1').innerHTML='<option value="'+l1+'">'+l1+'</option>';
+  document.getElementById('eRouteLink2').innerHTML='<option value="'+(l2||'')+'">'+(l2||'None')+'</option>';
+  document.getElementById('eRouteLinkError').style.display='none';
+  document.getElementById('eRouteLinkOk').textContent='Saved: '+routeCode+' linked to '+l1+(l2?' + '+l2:'');
+  document.getElementById('eRouteLinkOk').style.display='block';
+  document.getElementById('eRouteConfirmBtn').style.display='none';
+  document.getElementById('eRouteEmpData').value=JSON.stringify(emp);
+  document.getElementById('eRouteModal').classList.add('open');
+}
+function informAdminERoute(withAssign,emp,routeCode,l1,l2){
+  // Use input override → fallback to ADMIN_EMAIL
+  const overrideEl=document.getElementById('eRouteEmailTo');
+  const recipient=(overrideEl?.value||'').trim()||ADMIN_EMAIL;
+  if(!recipient){showToast('กรุณาระบุ Email หรือตั้งค่า Admin Email ใน Settings');return;}
+  if(!/^[^@]+@[^@]+\.[^@]+$/.test(recipient)){showToast('รูปแบบ Email ไม่ถูกต้อง: '+recipient);return;}
+  if(!GAS_URL){showToast('ยังไม่ได้เชื่อมต่อ Google Apps Script');return;}
+  const rc=routeCode||document.getElementById('eRouteCode').value;
+  const dc=document.getElementById('eRouteDC').value;
+  const link1=l1||document.getElementById('eRouteLink1').value;
+  const link2=l2||document.getElementById('eRouteLink2').value;
+  const empName=emp?(emp.firstNameTH+' '+emp.lastNameTH):'—';
+  gasCall({action:'sendEmail',to:recipient,
+    subject:'[HR] Sales Spare E-Route Assignment — '+rc,
+    body:'E-Route Sales Spare Assignment\n\nRoute: '+rc+'\nDC: '+dc+'\nEmployee: '+empName+'\nLinked Route 1: '+link1+'\nLinked Route 2: '+link2+'\n\nAction: '+(withAssign?'Assigned to employee':'Notification only (not yet assigned)')+'\nBy: '+(currentUser?.name||currentUser?.username||'')+'\nDate: '+new Date().toLocaleString()
+  });
+  showToast('📧 Email ส่งแล้ว → '+recipient);
+}
+
+function notifyNewHire(emp){} // replaced by openNewHireEmailPrompt
+function openNewHireEmailPrompt(emp){
+  // Populate modal fields
+  document.getElementById('newHireEmpData').value=JSON.stringify(emp);
+  document.getElementById('newHireModalSubtitle').textContent=emp.empID+' - '+emp.firstNameTH+' '+emp.lastNameTH;
+  document.getElementById('newHireSuccessMsg').textContent='บันทึกสำเร็จ: '+emp.firstNameTH+' '+emp.lastNameTH+' ('+emp.empID+')';
+  const emailField=document.getElementById('newHireEmailTo');
+  emailField.value=ADMIN_EMAIL||'';
+  const isAdm=currentUser?.role==='Admin'||currentUser?.role==='HR';
+  emailField.readOnly=!isAdm;
+  emailField.style.background=isAdm?'':'#f0ede8';
+  const noteEl=document.getElementById('newHireEmailNote2');
+  if(noteEl)noteEl.textContent=isAdm?'Admin สามารถแก้ไข email ได้':'Email ที่ Admin ตั้งไว้: '+(ADMIN_EMAIL||'(ยังไม่ได้ตั้งค่า)');
+  document.getElementById('newHireEmailNote').value='';
+  // Open modal — set display directly, add class, do NOT call populateAllDropdowns
+  const modal=document.getElementById('newHireEmailModal');
+  if(!modal)return;
+  modal.style.display='flex';
+  modal.classList.add('open');
+}
+function sendNewHireEmail(){
+  const empData=document.getElementById('newHireEmpData').value;
+  const to=document.getElementById('newHireEmailTo').value.trim();
+  const note=document.getElementById('newHireEmailNote').value.trim();
+  if(!to){closeModal('newHireEmailModal');showToast('Skipped email');return;}
+  if(!to.includes('@')){showToast('Invalid email format');return;}
+  if(!GAS_URL){
+    showToast('GAS not connected — go to Settings > Google Sheet and save the Web App URL first');
+    return;
+  }
+  const emp=JSON.parse(empData||'{}');
+  const body='New Employee Created\n\nName: '+emp.firstNameTH+' '+emp.lastNameTH+'\nEmployee ID: '+emp.empID+'\nNational ID: '+(emp.natID||'-')+'\nRole: '+emp.role+'\nDC: '+emp.dc+' | Region: '+emp.region+'\nRoute: '+(emp.route||'none')+'\nStart Date: '+emp.startDate+'\nPhone: '+(emp.phone||'-')+'\nCreated by: '+emp.createdBy+'\nDate: '+new Date().toLocaleString()+(note?'\n\nNote: '+note:'');
+  closeModal('newHireEmailModal');
+  gasCall({action:'sendEmail',to:to,subject:'[HR] New Employee - '+emp.firstNameTH+' '+emp.lastNameTH+' ('+emp.empID+')',body:body})
+    .then(function(r){
+      if(!r)showToast('GAS did not respond — check Settings > Google Sheet URL');
+      else if(r.ok)showToast('Email sent to '+to);
+      else showToast('Email error: '+(r.error||'check GAS permissions'));
+    }).catch(function(){showToast('Network error — check GAS URL and internet');});
+}
+
+// ══════════════════════════════════════════════════════════════
+// SAVE EMPLOYEE DATA (extracted for reuse by E-Route flow)
+// ══════════════════════════════════════════════════════════════
+function saveEmployeeData(emp){
+  const editId=emp.empID&&DB.employees.find(e=>e.empID===emp.empID&&e.createdAt)?emp.empID:'';
+  const isNew=!editId||!DB.employees.find(e=>e.empID===editId);
+  if(!isNew){
+    const idx=DB.employees.findIndex(e=>e.empID===editId);
+    if(idx>=0){const old=DB.employees[idx];emp.createdAt=old.createdAt;emp.resignDate=old.resignDate;emp.resignReason=old.resignReason;DB.employees[idx]=emp;}
+    addHistory(editId,emp.firstNameTH+' '+emp.lastNameTH,'Update',emp.dc,'Updated record',currentUser?.username);
+    if(GAS_URL)gasCall({action:'updateEmployee',id:editId,data:JSON.stringify(emp)});
+  }else{
+    emp.createdAt=new Date().toISOString();DB.employees.push(emp);
+    addHistory(emp.empID,emp.firstNameTH+' '+emp.lastNameTH,'New Hire',emp.dc,emp.role,currentUser?.username);
+    if(emp.salary>0){DB.salary.push({empID:emp.empID,type:'Initial',amount:emp.salary,date:emp.startDate,remark:'Starting salary'});saveDB('salary');}
+    if(GAS_URL)gasCall({action:'addEmployee',data:JSON.stringify(emp)});
+  }
+  saveDB('employees');renderEmployeeTable();renderDashboard();
+  // Return whether this was a new hire so callers can trigger email prompt
+  return isNew?JSON.parse(JSON.stringify(emp)):null;
+}
 </script>
 </body>
 </html>
