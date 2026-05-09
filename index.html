@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>HR Employee Record System v3.21</title>
+<title>HR Employee Record System v3.25</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -706,8 +706,9 @@ function applyScope(data){
 
 // ── ROUTE CONFLICT ────────────────────────────────────────────
 function getActiveRoutes(excludeId){
-  // Transferred employees still hold their route until officially reassigned
-  return DB.employees.filter(e=>(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.route&&e.empID!==excludeId).map(e=>e.route);
+  // Only Active and Probation hold their route
+  // Transferred or Resigned → route is free for reassignment
+  return DB.employees.filter(e=>(e.status==='Active'||e.status==='Probation')&&e.route&&e.empID!==excludeId).map(e=>e.route);
 }
 function getRouteCode(r){return typeof r==='object'?(r.route||r):String(r);}
 function getRouteDC(r){return typeof r==='object'?(r.dc||''):''}
@@ -722,7 +723,7 @@ function isRouteTaken(route,excludeId){
   return route?getActiveRoutes(excludeId).includes(route):false;
 }
 function getRouteOwner(route,excludeId){
-  return DB.employees.find(e=>e.route===route&&(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.empID!==excludeId);
+  return DB.employees.find(e=>e.route===route&&(e.status==='Active'||e.status==='Probation')&&e.empID!==excludeId);
 }
 // checkEmpRouteWarn defined below
 function checkTransferRouteWarn(route){
@@ -878,7 +879,13 @@ function populateRouteDropdown(selId,excludeId,filterDC){
   const prev=sel.value;
   const taken=getActiveRoutes(excludeId);
   sel.innerHTML='<option value="">No Route</option>';
-  const routes=DB.routes.filter(r=>{const dc=getRouteDC(r);return !filterDC||!dc||dc===filterDC;}).sort((a,b)=>getRouteCode(a).localeCompare(getRouteCode(b),undefined,{numeric:true,sensitivity:'base'}));
+  // Strict: when filterDC is given, only show routes that belong to that DC
+  // (routes with empty DC are excluded — they need to be explicitly assigned)
+  const routes=DB.routes.filter(r=>{
+    const dc=getRouteDC(r);
+    if(filterDC) return dc===filterDC; // strict match
+    return true; // no filter = show all
+  }).sort((a,b)=>getRouteCode(a).localeCompare(getRouteCode(b),undefined,{numeric:true,sensitivity:'base'}));
   routes.forEach(r=>{
     const code=getRouteCode(r);const dc=getRouteDC(r);
     const isTaken=taken.includes(code);
@@ -909,7 +916,11 @@ function populateTransferRouteDropdown(empId,targetDC){
 function populateAllDropdowns(){
   populateDCFilter();
   const editId=document.getElementById('editEmpId')?.value||'';
-  populateRouteDropdown('empRoute',editId);
+  // For ASM: filter by their DC. For others: use the DC currently selected in form (if any).
+  const sc=userScope();
+  const formDC=document.getElementById('empDC')?.value||'';
+  const filterDC=(sc&&sc.dc)?sc.dc:formDC;
+  populateRouteDropdown('empRoute',editId,filterDC);
   const nuDC=document.getElementById('newUserDC');
   if(nuDC){nuDC.innerHTML='<option value="">All DC</option>';DB.dcs.forEach(d=>{nuDC.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});}
   ['assetEmp','salEmp'].forEach(id=>{
@@ -992,9 +1003,15 @@ function clearDashFilters(){
 function initDashDCDropdown(){
   const el=document.getElementById('dDC');if(!el)return;
   const sc=userScope();
-  const region=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:'';
+  // Region scope: filter DCs by current dRegion selection (if any) or user scope
+  const dRegSel=document.getElementById('dRegion')?.value||'';
+  const region=sc&&(sc.role==='RSM'||sc.role==='ASM')?sc.region:dRegSel;
+  // Preserve current selection
+  const prev=el.value;
   el.innerHTML='<option value="">All DC</option>';
   DB.dcs.filter(d=>!region||d.region===region).forEach(d=>{el.innerHTML+=`<option value="${d.name}">${d.name}</option>`;});
+  // Restore previous selection if still in the list
+  if(prev&&Array.from(el.options).some(o=>o.value===prev))el.value=prev;
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
@@ -1519,7 +1536,7 @@ function renderSettings(){
   if(rlt)rlt.innerHTML=sortedR.map((r,i)=>{
     const rcode=getRouteCode(r);const rdc=getRouteDC(r);
     const isTakenR=activeRoutes.includes(rcode);
-    const ownerR=isTakenR?DB.employees.find(e=>e.route===rcode&&(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')):null;
+    const ownerR=isTakenR?DB.employees.find(e=>e.route===rcode&&(e.status==='Active'||e.status==='Probation')):null;
     return`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8"><div style="display:flex;align-items:center;gap:6px;flex:1"><span style="font-size:12.5px;font-family:'DM Mono',monospace">${rcode}</span>${rdc?`<span style="font-size:10.5px;color:var(--muted)">${rdc}</span>`:''} ${isTakenR?`<span class="badge badge-active" style="font-family:'DM Sans',sans-serif;font-size:10px">In Use · ${ownerR?ownerR.firstNameTH:''}</span>`:''}</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="editRoute(${i})">✎</button><button class="btn btn-danger btn-sm" onclick="removeRoute(${i})">×</button></div></div>`;
   }).join('');
   const gasEl=document.getElementById('gasURL');if(gasEl)gasEl.value=GAS_URL;
@@ -1691,8 +1708,21 @@ function importCSV(e){
       }else{skip++;continue;}
     }
     if(isAsset)saveDB('assets');else if(isSalary)saveDB('salary');else if(isHistory)saveDB('history');else{saveDB('employees');saveDB('salary');}
+    // Sync imported data to Google Sheet
+    if(GAS_URL){
+      if(isEmployee){
+        const newEmps=DB.employees.slice(-count);
+        gasCall({action:'bulkAddEmployees',data:JSON.stringify(newEmps)});
+      }else if(isAsset){
+        DB.assets.slice(-count).forEach(a=>gasCall({action:'addAsset',data:JSON.stringify(a)}));
+      }else if(isSalary){
+        DB.salary.slice(-count).forEach(s=>gasCall({action:'addSalary',data:JSON.stringify(s)}));
+      }else if(isHistory){
+        DB.history.slice(-count).forEach(h=>gasCall({action:'addHistory',data:JSON.stringify(h)}));
+      }
+    }
     renderEmployeeTable();renderDashboard();renderAssetTable();renderSalaryTable();
-    let msg=`Import สำเร็จ ${count} รายการ${skip?' (ข้าม '+skip+')':''}`;
+    let msg=`Import สำเร็จ ${count} รายการ${skip?' (ข้าม '+skip+')':''}${GAS_URL?' · ส่งไป Google Sheet แล้ว':' · localStorage only (ยังไม่ได้เชื่อม GAS)'}`;
     if(warnRoutes.length)msg+=` ⚠ Route ซ้ำ: ${[...new Set(warnRoutes)].join(', ')}`;
     showToast(msg);e.target.value='';
   };
@@ -2113,7 +2143,7 @@ function isERoute(routeCode){
 function getActiveRoutesInDC(dc,excludeEmpId){
   // Transferred employees within the same DC still hold their route
   return DB.employees
-    .filter(e=>(e.status==='Active'||e.status==='Probation'||e.status==='Transferred')&&e.route&&e.dc===dc&&e.empID!==excludeEmpId)
+    .filter(e=>(e.status==='Active'||e.status==='Probation')&&e.route&&e.dc===dc&&e.empID!==excludeEmpId)
     .map(e=>({routeCode:e.route,empID:e.empID,empName:e.firstNameTH+' '+e.lastNameTH}))
     .sort((a,b)=>a.routeCode.localeCompare(b.routeCode,undefined,{numeric:true,sensitivity:'base'}));
 }
