@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>HR Employee Record System v3.20</title>
+<title>HR Employee Record System v3.21</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -500,11 +500,9 @@ input[type="file"]{display:none}
     <div class="fg"><label class="flabel">Field to Change *</label><select class="fc" id="reqEditField" onchange="onReqFieldChange()"><option value="">Select field...</option><option>Route Code</option><option>E-Route Linked Routes</option><option>DC</option><option>Status</option><option>Phone</option><option>Salary</option><option>Other</option></select></div>
     <div class="fg"><label class="flabel">Current Value</label><input class="fc" id="reqEditCurrent" readonly style="background:#f0ede8"></div>
     <div class="fg"><label class="flabel">Requested New Value *</label><input class="fc" id="reqEditNew" placeholder="Enter requested value..."></div>
-    <!-- E-Route linked route fields (shown when field = E-Route Linked Routes) -->
-    <div id="reqERouteSection" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-top:-6px">
-      <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:8px">⚡ E-Route Linked Routes</div>
-      <div class="fg" style="margin-bottom:8px"><label class="flabel">Linked Route 1 *</label><select class="fc" id="reqELink1"><option value="">Select route...</option></select></div>
-      <div class="fg" style="margin-bottom:0"><label class="flabel">Linked Route 2 <span style="font-weight:400;color:#b45309">(optional)</span></label><select class="fc" id="reqELink2"><option value="">None</option></select></div>
+    <!-- E-Route linked routes hint (shown when field = E-Route Linked Routes) -->
+    <div id="reqERouteSection" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-top:-6px;font-size:11.5px;color:#92400e">
+      ⚡ <strong>E-Route Linked Routes</strong> — กรอกใน "Requested New Value" ด้านบน เช่น <code style="background:#fff;padding:1px 4px;border-radius:3px">101A01, 101A02</code> (ใส่ Route 1 อย่างน้อย 1 เส้น คั่นด้วย comma)
     </div>
     <div class="fg"><label class="flabel">Reason for Change *</label><textarea class="fc" id="reqEditReason" rows="3" placeholder="Provide business justification..." style="resize:vertical"></textarea></div>
   </div>
@@ -937,9 +935,9 @@ function populateAssetEmpDropdown(){
 }
 // onRoleChange kept as no-op stub (still bound to empRole onchange in HTML)
 function onRoleChange(){}
-function populateReportsList(){} // legacy stub — feature removed
+// populateReportsList removed (legacy)
 function onEmpDCChange(){
-  populateReportsList();
+  
   const editId=document.getElementById('editEmpId').value;
   const dc=document.getElementById('empDC').value;
   populateRouteDropdown('empRoute',editId,dc);
@@ -1223,7 +1221,9 @@ function saveEmployee(){
     const o=getRouteOwner(route,editId);
     if(!confirm('Route '+route+' ถูกใช้โดย '+(o?o.firstNameTH+' '+o.lastNameTH:'')+' (Active)\nยืนยันบันทึกต่อไป?'))return;
   }
-  const newEmp=saveEmployeeData(emp);
+  // editId from form: empty = new employee; non-empty = edit existing
+  const isNewHire=!editId;
+  const newEmp=saveEmployeeData(emp,isNewHire);
   closeModal('addEmployeeModal');
   if(newEmp){
     // New employee — show email prompt after modal closes
@@ -1259,7 +1259,7 @@ function editEmployee(id){
   }
   document.getElementById('empStatus').value = e.status;
   document.getElementById('empRouteWarn').style.display = 'none';
-  populateReportsList();
+  
   setTimeout(function(){
     if (!(sc_edit && sc_edit.dc)) document.getElementById('empDC').value = e.dc;
     document.getElementById('empRoute').value = e.route || '';
@@ -1915,25 +1915,14 @@ function onReqFieldChange(){
   const newField=document.getElementById('reqEditNew');
   if(field==='E-Route Linked Routes'){
     if(sec)sec.style.display='block';
-    // Hide reqEditNew and its label
-    var nfp=newField?newField.parentElement:null;
-    if(nfp&&nfp.classList.contains('fg'))nfp.style.display='none';
-    else if(newField){newField.style.display='none';}
-    // Populate link dropdowns with active non-E routes in same DC
-    const linkable=getActiveRoutesInDC(e.dc,empId).filter(function(r){return !isERoute(r.routeCode);});
-    const opts1='<option value="">Select route...</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
-    const opts2='<option value="">None (optional)</option>'+linkable.map(function(r){return '<option value="'+r.routeCode+'">'+r.routeCode+' — '+r.empName+'</option>';}).join('');
-    const l1=document.getElementById('reqELink1');const l2=document.getElementById('reqELink2');
-    if(l1){l1.innerHTML=opts1;}
-    if(l2){l2.innerHTML=opts2;}
-    // Pre-select existing linked routes (set after innerHTML)
-    if(l1&&e.eRouteLinks&&e.eRouteLinks[0])l1.value=e.eRouteLinks[0];
-    if(l2&&e.eRouteLinks&&e.eRouteLinks[1])l2.value=e.eRouteLinks[1];
+    // Keep reqEditNew visible; pre-fill with existing linked routes as comma-separated
+    if(newField){
+      newField.placeholder='e.g. 101A01, 101A02';
+      newField.value=(e.eRouteLinks||[]).join(', ');
+    }
   }else{
     if(sec)sec.style.display='none';
-    var nfp2=newField?newField.parentElement:null;
-    if(nfp2&&nfp2.classList.contains('fg'))nfp2.style.display='';
-    else if(newField)newField.style.display='';
+    if(newField){newField.placeholder='Enter requested value...';}
   }
 }
 function submitRequestEdit(){
@@ -1942,17 +1931,17 @@ function submitRequestEdit(){
   const newVal=document.getElementById('reqEditNew').value.trim();
   const reason=document.getElementById('reqEditReason').value.trim();
   if(!field){showToast('กรุณาเลือก Field ที่ต้องการแก้ไข');return;}
-  if(field!=='E-Route Linked Routes'&&!newVal){showToast('กรุณากรอก Requested New Value');return;}
+  if(!newVal){showToast('กรุณากรอก Requested New Value');return;}
   if(!reason){showToast('กรุณาระบุ Reason (บังคับ)');return;}
   const e=DB.employees.find(x=>x.empID===empId);if(!e)return;
-  // For E-Route Linked Routes: collect from dropdowns
+  // For E-Route Linked Routes: parse comma-separated input
   let newVal2=newVal;
   if(field==='E-Route Linked Routes'){
-    const l1v=document.getElementById('reqELink1')?.value||'';
-    const l2v=document.getElementById('reqELink2')?.value||'';
-    if(!l1v){showToast('กรุณาเลือก Linked Route 1');return;}
-    if(l2v&&l1v===l2v){showToast('Route 1 และ 2 ต้องไม่ซ้ำกัน');return;}
-    newVal2=[l1v,l2v].filter(Boolean).join(', ');
+    const parts=newVal.split(',').map(s=>s.trim()).filter(Boolean);
+    if(parts.length<1){showToast('กรุณากรอก Linked Route อย่างน้อย 1 เส้น');return;}
+    if(parts.length>2){showToast('สูงสุด 2 routes (คั่นด้วย comma)');return;}
+    if(parts.length===2&&parts[0]===parts[1]){showToast('Route 1 และ 2 ต้องไม่ซ้ำกัน');return;}
+    newVal2=parts.join(', ');
   }
   const req={
     id:'REQ-'+Date.now(),
@@ -2241,7 +2230,9 @@ function confirmERouteAssign(){
   var dc=document.getElementById('eRouteDC').value;
   var emailTo=(document.getElementById('eRouteEmailTo')?.value||'').trim()||ADMIN_EMAIL;
   // Save employee
-  const newEmp=saveEmployeeData(emp);
+  // Determine if new vs edit BEFORE save (after save, employee is in DB)
+  const isNewERoute=!emp.empID||!DB.employees.find(e=>e.empID===emp.empID&&e.createdAt);
+  const newEmp=saveEmployeeData(emp,isNewERoute);
   // Send E-Route notification email immediately (before closing modal so DOM values still valid)
   if(emailTo&&GAS_URL){
     gasCall({action:'sendEmail',to:emailTo,
@@ -2304,6 +2295,10 @@ function informAdminERoute(withAssign,emp,routeCode,l1,l2){
 
 function notifyNewHire(emp){} // replaced by openNewHireEmailPrompt
 function openNewHireEmailPrompt(emp){
+  // Force-close any other modal that may still be open (race condition prevention)
+  document.querySelectorAll('.modal-overlay.open').forEach(function(m){
+    if(m.id!=='newHireEmailModal'){m.classList.remove('open');m.style.display='';}
+  });
   // Populate modal fields
   document.getElementById('newHireEmpData').value=JSON.stringify(emp);
   document.getElementById('newHireModalSubtitle').textContent=emp.empID+' - '+emp.firstNameTH+' '+emp.lastNameTH;
@@ -2346,9 +2341,11 @@ function sendNewHireEmail(){
 // ══════════════════════════════════════════════════════════════
 // SAVE EMPLOYEE DATA (extracted for reuse by E-Route flow)
 // ══════════════════════════════════════════════════════════════
-function saveEmployeeData(emp){
-  const editId=emp.empID&&DB.employees.find(e=>e.empID===emp.empID&&e.createdAt)?emp.empID:'';
-  const isNew=!editId||!DB.employees.find(e=>e.empID===editId);
+function saveEmployeeData(emp,explicitIsNew){
+  // explicitIsNew: caller can force the decision. If not given, fall back to detection.
+  const existing=emp.empID?DB.employees.find(e=>e.empID===emp.empID&&e.createdAt):null;
+  const isNew=(typeof explicitIsNew==='boolean')?explicitIsNew:!existing;
+  const editId=isNew?'':emp.empID;
   if(!isNew){
     const idx=DB.employees.findIndex(e=>e.empID===editId);
     if(idx>=0){const old=DB.employees[idx];emp.createdAt=old.createdAt;emp.resignDate=old.resignDate;emp.resignReason=old.resignReason;DB.employees[idx]=emp;}
